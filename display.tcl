@@ -61,7 +61,7 @@ proc vTclWindow.top37 {base} {
     # CREATING WIDGETS
     ###################
     vTcl::widgets::core::toplevel::createCmd $top -class Toplevel \
-        -background {#d9d9d9} 
+        -background {#d9d9d9} -highlightcolor black 
     wm focusmodel $top passive
     wm geometry $top 772x539+509+259
     update
@@ -76,19 +76,22 @@ proc vTclWindow.top37 {base} {
     wm title $top "CodeSharer"
     vTcl:DefineAlias "$top" "Toplevel1" vTcl:Toplevel:WidgetProc "" 1
     label $top.lab39 \
-        -background {#d9d9d9} -foreground {#000000} -text {Output here} 
+        -activebackground {#f9f9f9} -activeforeground black -anchor nw \
+        -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
+        -text {Output here} 
     vTcl:DefineAlias "$top.lab39" "Label1" vTcl:WidgetProc "Toplevel1" 1
     button $top.but40 \
-        -activebackground {#d9d9d9} -background {#d9d9d9} \
-        -command {lambda : print("HI")} -foreground {#000000} \
-        -highlightcolor black -text Run 
+        -activebackground {#d9d9d9} -activeforeground black \
+        -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
+        -text Run 
     vTcl:DefineAlias "$top.but40" "Button1" vTcl:WidgetProc "Toplevel1" 1
     label $top.lab41 \
-        -anchor w -background {#d9d9d9} -foreground {#000000} -justify left \
-        -text {Who's typing:} 
+        -activebackground {#f9f9f9} -activeforeground black -anchor w \
+        -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
+        -justify left -text {Who's typing:} 
     vTcl:DefineAlias "$top.lab41" "Label2" vTcl:WidgetProc "Toplevel1" 1
     vTcl::widgets::ttk::scrolledtext::CreateCmd $top.scr45 \
-        -background {#d9d9d9} -height 468 -highlightcolor black -width 398 
+        -background {#d9d9d9} -height 75 -highlightcolor black -width 125 
     vTcl:DefineAlias "$top.scr45" "Scrolledtext1" vTcl:WidgetProc "Toplevel1" 1
 
     $top.scr45.01 configure -background white \
@@ -104,6 +107,10 @@ proc vTclWindow.top37 {base} {
         -undo 1 \
         -width 10 \
         -wrap none
+    ttk::combobox $top.tCo40 \
+        -values {"python2" "python3" "Haskell"} -textvariable combobox \
+        -foreground {} -background {} -takefocus {} 
+    vTcl:DefineAlias "$top.tCo40" "TCombobox1" vTcl:WidgetProc "Toplevel1" 1
     ###################
     # SETTING GEOMETRY
     ###################
@@ -111,7 +118,7 @@ proc vTclWindow.top37 {base} {
         -in $top -x 400 -y 40 -width 366 -relwidth 0 -height 468 -relheight 0 \
         -anchor nw -bordermode ignore 
     place $top.but40 \
-        -in $top -x 371 -y 10 -width 50 -height 26 -anchor nw \
+        -in $top -x 340 -y 10 -width 50 -height 26 -anchor nw \
         -bordermode ignore 
     place $top.lab41 \
         -in $top -x 0 -y 510 -width 766 -relwidth 0 -height 28 -relheight 0 \
@@ -119,6 +126,8 @@ proc vTclWindow.top37 {base} {
     place $top.scr45 \
         -in $top -x 0 -y 40 -width 398 -relwidth 0 -height 468 -relheight 0 \
         -anchor nw -bordermode ignore 
+    place $top.tCo40 \
+        -in $top -x 150 -y 10 -anchor nw -bordermode ignore 
 
     vTcl:FireEvent $base <<Ready>>
 }
