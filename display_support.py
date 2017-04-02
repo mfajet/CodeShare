@@ -18,6 +18,7 @@ try:
 except ImportError:
     import tkinter.ttk as ttk
     py3 = 1
+combobox=""
 
 def set_Tk_var():
     # These are Tk variables used passed to Tkinter and must be
@@ -41,5 +42,3 @@ def destroy_window():
 if __name__ == '__main__':
     import display
     display.vp_start_gui()
-
-

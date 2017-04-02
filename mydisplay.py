@@ -79,6 +79,7 @@ class CodeSharer:
         self.Label1 = Label(top)
         self.Label1.place(relx=0.52, rely=0.07, height=468, width=366)
         self.Label1.configure(text='''Output here''')
+        self.Label1.configure(anchor=NW)
         self.Label1.configure(width=366)
 
         self.Button1 = Button(top)
