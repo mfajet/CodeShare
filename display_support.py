@@ -18,7 +18,7 @@ try:
 except ImportError:
     import tkinter.ttk as ttk
     py3 = 1
-combobox=""
+combobox="python3"
 
 def set_Tk_var():
     # These are Tk variables used passed to Tkinter and must be

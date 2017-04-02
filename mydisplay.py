@@ -47,14 +47,21 @@ def destroy_CodeSharer():
     w.destroy()
     w = None
 
-def runCode(st, outputLabel):
-
-    clientSocket.send(st.get(1.0, END).encode())
-    output = clientSocket.recv(1024).decode()
-    outputLabel.configure(state=NORMAL)
-    outputLabel.delete(1.0, END)
-    outputLabel.insert(END, output)
-    outputLabel.configure(state=DISABLED)
+def runCode(st, outputLabel,language):
+    code = st.get(1.0, END)
+    if not code.strip() == "" and not code == None:
+        toSend = language + " " + code
+        clientSocket.send(toSend.encode())
+        output = clientSocket.recv(1024).decode()
+        outputLabel.configure(state=NORMAL)
+        outputLabel.delete(1.0, END)
+        outputLabel.insert(END, output)
+        outputLabel.configure(state=DISABLED)
+    else:
+        outputLabel.configure(state=NORMAL)
+        outputLabel.delete(1.0, END)
+        outputLabel.insert(END, "Empty file")
+        outputLabel.configure(state=DISABLED)
 
 
 class CodeSharer:
@@ -80,7 +87,7 @@ class CodeSharer:
         self.Button1 = Button(top)
         self.Button1.place(relx=0.48, rely=0.02, height=26, width=50)
         self.Button1.configure(activebackground="#d9d9d9")
-        self.Button1.configure(command=(lambda : runCode(self.Scrolledtext1, self.Scrolledtext2)))
+        self.Button1.configure(command=(lambda : runCode(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
         self.Button1.configure(text='''Run''')
 
 
@@ -118,6 +125,13 @@ class CodeSharer:
         self.TCombobox1.configure(values=self.value_list)
         self.TCombobox1.configure(textvariable=display_support.combobox)
         self.TCombobox1.configure(takefocus="")
+        self.TCombobox1.current(1)
+
+        def langselection(e):
+            display_support.combobox = self.TCombobox1.get()
+
+        self.TCombobox1.bind("<<ComboboxSelected>>", langselection)
+
 
         self.Scrolledtext2 = ScrolledText(top)
         self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.87
