@@ -9,6 +9,7 @@ import os
 ## global variables
 tList = []
 piers_list = []
+pier_base_port = 3000
 
 def clientThread(connectionSocket, addr):
     pier = None
@@ -16,19 +17,17 @@ def clientThread(connectionSocket, addr):
         print ("Thread Client Entering Now...")
         # print (addr)
         host, socket = addr
-        pier = host + "," + str(socket)
         
-        print(piers_list)
-        to_send = " ".join(piers_list) or "[]"
+        pier = host + "," + str(pier_base_port + len(piers_list))
+        piers_list.insert(0, pier)        
+        to_send = " ".join(piers_list) 
         connectionSocket.send(to_send.encode())
-        piers_list.append(pier)
+        print(piers_list)
         while True:
-            print("inside")
             f = open("tempFile",'w')
             # print("inside while loop")
             msg = connectionSocket.recv(1024).decode()
-            print(msg)
-            if msg[3:] == "end":
+            if msg == "end":
                 break
                 
             f.write(msg[8:])
@@ -40,6 +39,7 @@ def clientThread(connectionSocket, addr):
             except:
                 output = "Unexpected error".encode()
             connectionSocket.send(output)
+    
     
         piers_list.remove(pier)
         print(piers_list)
