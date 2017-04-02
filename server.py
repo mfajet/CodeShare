@@ -8,21 +8,21 @@ from subprocess import Popen, PIPE, STDOUT
 import os
 ## global variables
 tList = []
-piers_list = []
-pier_base_port = 3000
+peers_list = []
+peer_base_port = 3000
 
 def clientThread(connectionSocket, addr):
-    pier = None
+    peer = None
     try:
         print ("Thread Client Entering Now...")
         # print (addr)
         host, socket = addr
 
-        pier = host + "," + str(pier_base_port + len(piers_list))
-        piers_list.insert(0, pier)
-        to_send = " ".join(piers_list)
+        peer = host + "," + str(peer_base_port + len(peers_list))
+        peers_list.insert(0, peer)
+        to_send = " ".join(peers_list)
         connectionSocket.send(to_send.encode())
-        print(piers_list)
+        print(peers_list)
         while True:
             f = open("tempFile",'w')
             # print("inside while loop")
@@ -49,14 +49,14 @@ def clientThread(connectionSocket, addr):
             connectionSocket.send(output)
 
 
-        piers_list.remove(pier)
-        print(piers_list)
+        peers_list.remove(peer)
+        print(peers_list)
 
     except OSError as e:
         # A socket error
           print("Socket error:",e)
-          piers_list.remove(pier)
-          print(piers_list)
+          peers_list.remove(peer)
+          print(peers_list)
 
 
 def joinAll():
