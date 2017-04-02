@@ -30,7 +30,13 @@ def vp_start_gui():
     root = Tk()
     top = CodeSharer (root)
     display_support.init(root, top)
+    root.protocol("WM_DELETE_WINDOW", handle_close)
     root.mainloop()
+
+def handle_close():
+    global root
+    print("BYE")
+    root.destroy()
 
 w = None
 def create_CodeSharer(root, *args, **kwargs):
@@ -147,7 +153,6 @@ class CodeSharer:
         self.Scrolledtext2.configure(state=DISABLED)
 
 
-
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
     '''Configure the scrollbars for a widget.'''
@@ -214,6 +219,7 @@ def _create_container(func):
         container = ttk.Frame(master)
         return func(cls, container, **kw)
     return wrapped
+
 
 class ScrolledText(AutoScroll, Text):
     '''A standard Tkinter Text widget with scrollbars that will
