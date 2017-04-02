@@ -51,7 +51,10 @@ def runCode(st, outputLabel):
 
     clientSocket.send(st.get(1.0, END).encode())
     output = clientSocket.recv(1024).decode()
-    outputLabel.configure(text=output)
+    outputLabel.configure(state=NORMAL)
+    outputLabel.delete(1.0, END)
+    outputLabel.insert(END, output)
+    outputLabel.configure(state=DISABLED)
 
 
 class CodeSharer:
@@ -74,18 +77,10 @@ class CodeSharer:
         top.geometry("772x539+503+177")
         top.title("CodeSharer")
 
-
-
-        self.Label1 = Label(top)
-        self.Label1.place(relx=0.52, rely=0.07, height=468, width=366)
-        self.Label1.configure(text='''Output here''')
-        self.Label1.configure(anchor=NW)
-        self.Label1.configure(width=366)
-
         self.Button1 = Button(top)
         self.Button1.place(relx=0.48, rely=0.02, height=26, width=50)
         self.Button1.configure(activebackground="#d9d9d9")
-        self.Button1.configure(command=(lambda : runCode(self.Scrolledtext1, self.Label1)))
+        self.Button1.configure(command=(lambda : runCode(self.Scrolledtext1, self.Scrolledtext2)))
         self.Button1.configure(text='''Run''')
 
 
@@ -105,9 +100,16 @@ class CodeSharer:
         self.Scrolledtext1.configure(insertborderwidth="3")
         self.Scrolledtext1.configure(selectbackground="#c4c4c4")
         self.Scrolledtext1.configure(takefocus="0")
+        self.Scrolledtext1.configure(tabs="    ")
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
+
+        def tab(arg):
+            self.Scrolledtext1.insert(INSERT, " " * 4)
+            return 'break'
+
+        self.Scrolledtext1.bind("<Tab>", tab)
 
         self.TCombobox1 = ttk.Combobox(top)
         self.TCombobox1.place(relx=0.19, rely=0.02, relheight=0.03
@@ -116,6 +118,19 @@ class CodeSharer:
         self.TCombobox1.configure(values=self.value_list)
         self.TCombobox1.configure(textvariable=display_support.combobox)
         self.TCombobox1.configure(takefocus="")
+
+        self.Scrolledtext2 = ScrolledText(top)
+        self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.87
+                , relwidth=0.48)
+        self.Scrolledtext2.configure(background="white")
+        self.Scrolledtext2.configure(font="TkTextFont")
+        self.Scrolledtext2.configure(insertborderwidth="3")
+        self.Scrolledtext2.configure(selectbackground="#c4c4c4")
+        self.Scrolledtext2.configure(undo="1")
+        self.Scrolledtext2.configure(width=10)
+        self.Scrolledtext2.configure(wrap=NONE)
+        self.Scrolledtext2.insert(END, '''Output will show up here''')
+        self.Scrolledtext2.configure(state=DISABLED)
 
 
 
