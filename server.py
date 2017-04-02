@@ -17,10 +17,10 @@ def clientThread(connectionSocket, addr):
         print ("Thread Client Entering Now...")
         # print (addr)
         host, socket = addr
-        
+
         pier = host + "," + str(pier_base_port + len(piers_list))
-        piers_list.insert(0, pier)        
-        to_send = " ".join(piers_list) 
+        piers_list.insert(0, pier)
+        to_send = " ".join(piers_list)
         connectionSocket.send(to_send.encode())
         print(piers_list)
         while True:
@@ -29,21 +29,29 @@ def clientThread(connectionSocket, addr):
             msg = connectionSocket.recv(1024).decode()
             if msg == "end":
                 break
-                
+            if msg[0:7] == "python3":
+                cmd = 'python3 tempFile'
+            elif msg[0:7] == "python2":
+                cmd = 'python tempFile'
+            elif msg[0:7].lower() =="haskell":
+                cmd= 'runhaskell tempFile'
+            else:
+                connectionSocket.send("Unknown language".encode())
+                continue
+
             f.write(msg[8:])
             f.close()
             try:
-                cmd = 'python3 tempFile'
                 p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
                 output = p.stdout.read()
             except:
                 output = "Unexpected error".encode()
             connectionSocket.send(output)
-    
-    
+
+
         piers_list.remove(pier)
         print(piers_list)
-    
+
     except OSError as e:
         # A socket error
           print("Socket error:",e)
