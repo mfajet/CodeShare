@@ -23,6 +23,9 @@ serverName = '127.0.0.1'
 serverPort = 2110
 clientSocket = socket(AF_INET,SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
+piers = clientSocket.recv(1024).decode()
+print(piers)
+piers_list  = [piers.split()]
 
 def vp_start_gui():
     '''Starting point when module is the main routine.'''
@@ -44,11 +47,14 @@ def create_CodeSharer(root, *args, **kwargs):
 
 def destroy_CodeSharer():
     global w
+    clientSocket.send("end")
+    clientSocket.close()
     w.destroy()
     w = None
 
 def runCode(st, outputLabel,language):
     code = st.get(1.0, END)
+    
     if not code.strip() == "" and not code == None:
         toSend = language + " " + code
         clientSocket.send(toSend.encode())
@@ -62,7 +68,6 @@ def runCode(st, outputLabel,language):
         outputLabel.delete(1.0, END)
         outputLabel.insert(END, "Empty file")
         outputLabel.configure(state=DISABLED)
-
 
 class CodeSharer:
     def __init__(self, top=None):
@@ -90,6 +95,12 @@ class CodeSharer:
         self.Button1.configure(command=(lambda : runCode(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
         self.Button1.configure(text='''Run''')
 
+
+        self.Button1 = Button(top)
+        self.Button1.place(relx=0.60, rely=0.02, height=26, width=120)
+        self.Button1.configure(activebackground="#d9d9d9")
+        self.Button1.configure(command=(lambda : connectPiers()))
+        self.Button1.configure(text='''Connect to piers''')
 
 
         self.Label2 = Label(top)
