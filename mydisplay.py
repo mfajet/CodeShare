@@ -75,14 +75,14 @@ def handle_connection(connectionSocket, top):
         "8": ""
     }
     while e.isSet():
-        try:   
+        try:
             input_text = connectionSocket.recv(1024).decode().split()
             outputpanel = top.Scrolledtext1
             command = input_text[0].lower()
             print(input_text)
             if command == "end":
                 break
-                
+
             index = input_text[1]
 
             if command == "backspace":
@@ -91,20 +91,20 @@ def handle_connection(connectionSocket, top):
                 char_index = int(index_ar[1]) - 1
                 index_ar[1] = str(char_index)
                 index = ".".join(index_ar)
-                if char_index >= 0: 
-                    outputpanel.delete(index)   
-                # backspace reached the beginning of the line, move the line up 
+                if char_index >= 0:
+                    outputpanel.delete(index)
+                # backspace reached the beginning of the line, move the line up
                 if char_index == -1 and line_index > 1:
                     index = str(line_index - 1)+".end"
                     outputpanel.delete(index)
-            
+
             elif command == "replace":
                 start = input_text[1]
                 end = input_text[2]
                 char = input_text[3]
-                
+
                 try:
-                    text = escaped_chars[char] 
+                    text = escaped_chars[char]
                 except KeyError:
                     text = chr(int(char))
 
@@ -113,20 +113,20 @@ def handle_connection(connectionSocket, top):
 
             elif command == "delete":
                 outputpanel.delete(index)
-            
+
             else:
                 try:
                     char = input_text[2]
                     try:
-                        text = escaped_chars[char] 
+                        text = escaped_chars[char]
                     except KeyError:
-                        text = str(chr(int(char)))   
+                        text = str(chr(int(char)))
 
-                    outputpanel.insert(index, text)  
-             
+                    outputpanel.insert(index, text)
+
                 except IndexError:
                     print("not a char")
-           
+
         except OSError:
             break
 
@@ -157,10 +157,10 @@ def connect_peers(outputpanel, top):
                 peer_server = peer.split(",")[0]
                 peer_socket = int(peer.split(",")[1])
                 peer_conn = socket(AF_INET,SOCK_STREAM)
-                peer_conn.connect((peer_server,peer_socket))  
+                peer_conn.connect((peer_server,peer_socket))
                 code = peer_conn.recv(1024).decode()
                 if code != "___null___" and not already_connected:
-                    top.Scrolledtext1.insert(1.0, code)  
+                    top.Scrolledtext1.insert(1.0, code)
                 t = threading.Thread(target=handle_connection, args=(peer_conn, top))
                 t.start()
                 tlist.append(t)
@@ -210,7 +210,7 @@ def hande_keyboard(event):
     start = None
     end = None
     input_text = ""
-   
+
     try:
         input_text = str(ord(event.char))
         start = event.widget.index(SEL_FIRST)
@@ -219,7 +219,7 @@ def hande_keyboard(event):
         print("not a char")
     except TclError:
         print("nothing is selected")
-        
+
 
     index = event.widget.index(INSERT)
 
@@ -227,7 +227,7 @@ def hande_keyboard(event):
         to_send = "replace " + start + " " + end + " " + input_text
     else:
         to_send = event.keysym + " " + index + " " + input_text
-    
+
     send_update(to_send)
     return
 
@@ -297,12 +297,12 @@ class CodeSharer:
         self.Label2.place(relx=0.0, rely=0.95, height=28, width=766)
         self.Label2.configure(anchor=W)
         self.Label2.configure(justify=LEFT)
-        self.Label2.configure(text="""Who"s typing:""")
+        self.Label2.configure(text="""Who's typing:""")
         self.Label2.configure(width=766)
 
         self.Scrolledtext1 = ScrolledText(top)
 
-        
+
         self.Scrolledtext1.configure()
         self.Scrolledtext1.place(relx=0.0, rely=0.07, relheight=0.87
                 , relwidth=0.52)
