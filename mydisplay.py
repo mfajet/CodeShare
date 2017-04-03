@@ -17,7 +17,7 @@ except ImportError:
     import tkinter.ttk as ttk
     py3 = 1
 
-import display_support
+import mydisplay_support as display_support
 from socket import *
 
 serverName = '127.0.0.1'
