@@ -204,13 +204,16 @@ def run_code(input, outputLabel, language):
         outputLabel.delete(1.0, END)
         outputLabel.insert(END, "Empty file")
         outputLabel.configure(state=DISABLED)
+    outputLabel.see(END)
 
 def send_message(entry, box):
     message = entry.get()
-    box.configure(state=NORMAL)
-    box.insert(END, message + " - me\n", "right")
-    box.configure(state=DISABLED)
-    entry.delete(0,END)
+    if not message == "" and not message == None:
+        box.configure(state=NORMAL)
+        box.insert(END, message + " - me\n", "right")
+        box.configure(state=DISABLED)
+        entry.delete(0,END)
+        box.see(END)
 
 class CodeSharer:
     def __init__(self, top=None):
