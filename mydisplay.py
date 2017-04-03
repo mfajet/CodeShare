@@ -286,7 +286,7 @@ class CodeSharer:
 
 
         self.Scrolledtext2 = ScrolledText(top)
-        self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.87
+        self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.52
                 , relwidth=0.48)
         self.Scrolledtext2.configure(background="white")
         self.Scrolledtext2.configure(font="TkTextFont")
@@ -294,10 +294,36 @@ class CodeSharer:
         self.Scrolledtext2.configure(selectbackground="#c4c4c4")
         self.Scrolledtext2.configure(undo="1")
         self.Scrolledtext2.configure(width=10)
-        self.Scrolledtext2.configure(wrap=NONE)
+        self.Scrolledtext2.configure(wrap=CHAR)
         self.Scrolledtext2.insert(END, '''Output will show up here\n''')
         self.Scrolledtext2.configure(state=DISABLED)
 
+        self.Scrolledtext3 = ScrolledText(top)
+        self.Scrolledtext3.place(relx=0.52, rely=0.63, relheight=0.26
+                , relwidth=0.48)
+        self.Scrolledtext3.configure(background="white")
+        self.Scrolledtext3.configure(font="TkTextFont")
+        self.Scrolledtext3.configure(insertborderwidth="3")
+        self.Scrolledtext3.configure(selectbackground="#c4c4c4")
+        self.Scrolledtext3.configure(undo="1")
+        self.Scrolledtext3.configure(width=10)
+        self.Scrolledtext3.configure(wrap=WORD)
+        self.Scrolledtext3.configure(state=DISABLED)
+
+        self.Button2 = Button(top)
+        self.Button2.place(relx=0.92, rely=0.89, relheight=0.05, relwidth=.08)
+        self.Button2.configure(activebackground="#d9d9d9")
+        self.Button2.configure(text='''Send''')
+
+        self.Entry1 = Entry(top)
+        self.Entry1.place(relx=0.52, rely=0.89, relheight=0.05, relwidth=0.4)
+        self.Entry1.configure(background="white")
+        self.Entry1.configure(font="TkFixedFont")
+        self.Entry1.configure(width=306)
+
+        self.Label1 = Label(top)
+        self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)
+        self.Label1.configure(text='''Chat with peers''')
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):

@@ -29,6 +29,7 @@ proc vTcl:project:info {} {
     }
     set site_3_0 $base.scr45
     set site_3_0 $base.scr38
+    set site_3_0 $base.cpd37
     namespace eval ::widgets_bindings {
         set tagslist _TopLevel
     }
@@ -108,7 +109,7 @@ proc vTclWindow.top37 {base} {
         -foreground {} -background {} -takefocus {} 
     vTcl:DefineAlias "$top.tCo40" "TCombobox1" vTcl:WidgetProc "Toplevel1" 1
     vTcl::widgets::ttk::scrolledtext::CreateCmd $top.scr38 \
-        -background {#d9d9d9} -height 468 -highlightcolor black -width 368 
+        -background {#d9d9d9} -height 278 -highlightcolor black -width 368 
     vTcl:DefineAlias "$top.scr38" "Scrolledtext2" vTcl:WidgetProc "Toplevel1" 1
 
     $top.scr38.01 configure -background white \
@@ -123,6 +124,33 @@ proc vTclWindow.top37 {base} {
         -undo 1 \
         -width 10 \
         -wrap none
+    vTcl::widgets::ttk::scrolledtext::CreateCmd $top.cpd37 \
+        -background {#d9d9d9} -height 138 -highlightcolor black -width 368 
+    vTcl:DefineAlias "$top.cpd37" "Scrolledtext3" vTcl:WidgetProc "Toplevel1" 1
+
+    $top.cpd37.01 configure -background white \
+        -font TkTextFont \
+        -foreground black \
+        -height 3 \
+        -highlightcolor black \
+        -insertbackground black \
+        -insertborderwidth 3 \
+        -selectbackground #c4c4c4 \
+        -selectforeground black \
+        -undo 1 \
+        -width 10 \
+        -wrap none
+    button $top.but38 \
+        -activebackground {#d9d9d9} -background {#d9d9d9} \
+        -foreground {#000000} -highlightcolor black -text Send 
+    vTcl:DefineAlias "$top.but38" "Button2" vTcl:WidgetProc "Toplevel1" 1
+    entry $top.ent39 \
+        -background white -font TkFixedFont -foreground {#000000} \
+        -insertbackground black 
+    vTcl:DefineAlias "$top.ent39" "Entry1" vTcl:WidgetProc "Toplevel1" 1
+    label $top.lab40 \
+        -background {#d9d9d9} -foreground {#000000} -text {Chat with peers} 
+    vTcl:DefineAlias "$top.lab40" "Label1" vTcl:WidgetProc "Toplevel1" 1
     ###################
     # SETTING GEOMETRY
     ###################
@@ -138,8 +166,20 @@ proc vTclWindow.top37 {base} {
     place $top.tCo40 \
         -in $top -x 150 -y 10 -anchor nw -bordermode ignore 
     place $top.scr38 \
-        -in $top -x 400 -y 40 -width 368 -relwidth 0 -height 468 -relheight 0 \
+        -in $top -x 400 -y 38 -width 368 -relwidth 0 -height 278 -relheight 0 \
         -anchor nw -bordermode ignore 
+    place $top.cpd37 \
+        -in $top -x 400 -y 340 -width 368 -relwidth 0 -height 138 \
+        -relheight 0 -anchor nw -bordermode ignore 
+    place $top.but38 \
+        -in $top -x 710 -y 480 -width 57 -height 26 -anchor nw \
+        -bordermode ignore 
+    place $top.ent39 \
+        -in $top -x 400 -y 480 -width 306 -relwidth 0 -height 30 -relheight 0 \
+        -anchor nw -bordermode ignore 
+    place $top.lab40 \
+        -in $top -x 404 -y 320 -width 99 -height 18 -anchor nw \
+        -bordermode ignore 
 
     vTcl:FireEvent $base <<Ready>>
 }
