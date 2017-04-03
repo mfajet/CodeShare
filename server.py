@@ -44,8 +44,10 @@ def clientThread(connectionSocket, addr):
             try:
                 p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
                 output = p.stdout.read()
+                if(output.decode() =="" or output.decode()==None):
+                    output="[No output]\n".encode()
             except:
-                output = "Unexpected error".encode()
+                output = "Unexpected error\n".encode()
             connectionSocket.send(output)
 
 

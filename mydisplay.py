@@ -17,7 +17,7 @@ except ImportError:
     import tkinter.ttk as ttk
     py3 = 1
 
-import display_support
+import mydisplay_support as display_support
 from socket import *
 
 serverName = "127.0.0.1"
@@ -34,6 +34,11 @@ e = threading.Event()
 e.set()
 
 
+def joinAll():
+    for t in tlist:
+        print("closing thread:", t)
+        t.join(timeout=1)
+
 try:
     peer_server = socket(AF_INET,SOCK_STREAM)
     peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -45,7 +50,7 @@ except OSError:
 sent_buffer_count = 0
 
 print(peers_list)
-
+alive = True
 def accept_connections(server, top):
     try:
         while e.isSet():
@@ -56,7 +61,7 @@ def accept_connections(server, top):
             else:
                 connectionSocket.send("e".encode())
             t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
-            top.Scrolledtext2.configure(state=NORMAL)         
+            top.Scrolledtext2.configure(state=NORMAL)
             top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
             top.Scrolledtext2.configure(state=DISABLED)
             t.start()
@@ -73,13 +78,13 @@ def handle_connection(connectionSocket, top):
     }
     while e.isSet():
         try:   
-            input_text = connectionSocket.recv(1024).decode("ascii").split()
+            input_text = connectionSocket.recv(1024).decode().split()
             outputpanel = top.Scrolledtext1
             command = input_text[0].lower()
             print(input_text)
             if command == "quit":
                 break
-            
+
             index = input_text[1]
 
             if command == "backspace":
@@ -127,7 +132,6 @@ def handle_connection(connectionSocket, top):
         except OSError:
             break
 
-
 def close_connections():
     global peer_connections
     clientSocket.send("end".encode())
@@ -136,33 +140,38 @@ def close_connections():
         peer.send("end".encode())
         peer.close()
 
+already_connected = False
 def connect_peers(outputpanel, top):
     global peer_connections
-    try:
-        for peer in peers_list:
-            print(peer)
-            peer_server = peer.split(",")[0]
-            peer_socket = int(peer.split(",")[1])
-            peer_conn = socket(AF_INET,SOCK_STREAM)
-            peer_conn.connect((peer_server,peer_socket))
-            code = peer_conn.recv(1024).decode()
-            # loads the code from peer
-            if code != "e":
+    global already_connected
+    if not already_connected:
+        try:
+            for peer in peers_list:
+                print(peer)
+                peer_server = peer.split(",")[0]
+                peer_socket = int(peer.split(",")[1])
+                peer_conn = socket(AF_INET,SOCK_STREAM)
+                peer_conn.connect((peer_server,peer_socket))
+                code = peer_conn.recv(1024).decode()
+                # loads the code from peer
                 top.Scrolledtext1.insert(1.0, code)
-            t = threading.Thread(target=handle_connection, args=(peer_conn, top))
-            t.start()
-            tlist.append(t)
-            outputpanel.configure(state=NORMAL)
-            outputpanel.insert(END, "Connected to peer: " + peer_server + "\n")
-            outputpanel.configure(state=DISABLED)
-            peer_connections.append(peer_conn)
-    except KeyboardInterrupt:
-            joinAll()
+                t = threading.Thread(target=handle_connection, args=(peer_conn, top))
+                t.start()
+                tlist.append(t)
+                outputpanel.configure(state=NORMAL)
+                outputpanel.insert(END, "Connected to peer: " + peer_server + "\n")
+                outputpanel.configure(state=DISABLED)
+                peer_connections.append(peer_conn)
+                already_connected = True
+        except KeyboardInterrupt:
+                joinAll()
 
-def joinAll():
-    for t in tlist:
-        print("closing thread:", t)
-        t.join(timeout=1)
+def disconnect_peers():
+    global peer_connections
+    for conn in peer_connections:
+        conn.send("leaving".encode())
+        conn.shutdown(SHUT_RDWR)
+        conn.close()
 
 def vp_start_gui():
     """Starting point when module is the main routine."""
@@ -181,9 +190,9 @@ def handle_close():
     global root
     e.clear()
     root.destroy()
-    close_connections() 
-    joinAll() 
-   
+    close_connections()
+    joinAll()
+
 w = None
 def create_CodeSharer(root, *args, **kwargs):
     """Starting point when module is imported by another program."""
@@ -236,7 +245,16 @@ def run_code(input, outputLabel, language):
         outputLabel.configure(state=NORMAL)
         outputLabel.insert(END, "Empty file")
         outputLabel.configure(state=DISABLED)
+    outputLabel.see(END)
 
+def send_message(entry, box):
+    message = entry.get()
+    if not message == "" and not message == None:
+        box.configure(state=NORMAL)
+        box.insert(END, message + " - me\n", "right")
+        box.configure(state=DISABLED)
+        entry.delete(0,END)
+        box.see(END)
 
 class CodeSharer:
     def __init__(self, top=None):
@@ -296,7 +314,7 @@ class CodeSharer:
         self.Scrolledtext1.bind("<Key>", hande_keyboard)
         # tab event not firing
         self.Scrolledtext1.bind("<Tab>", handle_tab)
-        
+
         def tab(arg):
             self.Scrolledtext1.insert(INSERT, " " * 4)
             return "break"
@@ -319,7 +337,7 @@ class CodeSharer:
 
 
         self.Scrolledtext2 = ScrolledText(top)
-        self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.87
+        self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.52
                 , relwidth=0.48)
         self.Scrolledtext2.configure(background="white")
         self.Scrolledtext2.configure(font="TkTextFont")
@@ -327,10 +345,42 @@ class CodeSharer:
         self.Scrolledtext2.configure(selectbackground="#c4c4c4")
         self.Scrolledtext2.configure(undo="1")
         self.Scrolledtext2.configure(width=10)
-        self.Scrolledtext2.configure(wrap=NONE)
-        self.Scrolledtext2.insert(END, """Output will show up here\n""")
+        self.Scrolledtext2.configure(wrap=CHAR)
+        self.Scrolledtext2.insert(END, '''Output will show up here\n''')
         self.Scrolledtext2.configure(state=DISABLED)
 
+        self.Scrolledtext3 = ScrolledText(top)
+        self.Scrolledtext3.place(relx=0.52, rely=0.63, relheight=0.26
+                , relwidth=0.48)
+        self.Scrolledtext3.configure(background="white")
+        self.Scrolledtext3.configure(font="TkTextFont")
+        self.Scrolledtext3.configure(insertborderwidth="3")
+        self.Scrolledtext3.configure(selectbackground="#c4c4c4")
+        self.Scrolledtext3.configure(undo="1")
+        self.Scrolledtext3.configure(width=10)
+        self.Scrolledtext3.configure(wrap=WORD)
+        self.Scrolledtext3.tag_configure("right", justify="right")
+        self.Scrolledtext3.tag_configure("left", justify="left")
+        self.Scrolledtext3.configure(state=DISABLED)
+
+        self.Button2 = Button(top)
+        self.Button2.place(relx=0.92, rely=0.89, relheight=0.05, relwidth=.08)
+        self.Button2.configure(activebackground="#d9d9d9")
+        self.Button2.configure(text='''Send''')
+        self.Button2.configure(command=(lambda: send_message(self.Entry1,self.Scrolledtext3)))
+
+        self.Entry1 = Entry(top)
+        self.Entry1.place(relx=0.52, rely=0.89, relheight=0.05, relwidth=0.4)
+        self.Entry1.configure(background="white")
+        self.Entry1.configure(font="TkFixedFont")
+        self.Entry1.configure(width=306)
+        self.Entry1.bind("<Key-Return>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
+        self.Entry1.bind("<Key-KP_Enter>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
+        self.Entry1.bind("<Key-Insert>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
+
+        self.Label1 = Label(top)
+        self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)
+        self.Label1.configure(text='''Chat with peers''')
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
