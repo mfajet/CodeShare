@@ -30,13 +30,21 @@ peers_list = clientSocket.recv(1024).decode().split()
 peer_info = peers_list[0]
 client_socket = int(peer_info.split(",")[1])
 peers_list.remove(peer_info)
+e = threading.Event()
+e.set()
+
+
+def joinAll():
+    for t in tlist:
+        print("closing thread:", t)
+        t.join(timeout=1)
 
 try:
     peer_server = socket(AF_INET,SOCK_STREAM)
     peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     peer_server.bind((serverName, client_socket))
     peer_server.listen(1)
-except KeyboardInterrupt:
+except OSError:
     joinAll()
 
 sent_buffer_count = 0
@@ -44,43 +52,95 @@ sent_buffer_count = 0
 print(peers_list)
 alive = True
 def accept_connections(server, top):
-    global alive
-    while alive:
-        connectionSocket, addr = server.accept()
-        t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
-        top.Scrolledtext2.configure(state=NORMAL)
-        top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
-        top.Scrolledtext2.configure(state=DISABLED)
-        t.start()
-        tlist.append(t)
-        peer_connections.append(connectionSocket)
-    print("EXIT2")
+    try:
+        while e.isSet():
+            connectionSocket, addr = server.accept()
+            # sends the current code to the peers
+            connectionSocket.send(top.Scrolledtext1.get(1.0, END).encode())
+            t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
+            top.Scrolledtext2.configure(state=NORMAL)
+            top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
+            top.Scrolledtext2.configure(state=DISABLED)
+            t.start()
+            tlist.append(t)
+            peer_connections.append(connectionSocket)
+    except KeyboardInterrupt:
+        joinAll()
 
 def handle_connection(connectionSocket, top):
-    global alive
-    while alive:
-        msg = connectionSocket.recv(1024).decode()
-        outputpanel = top.Scrolledtext1
-        outputpanel.configure(state=NORMAL)
-        outputpanel.insert(END, msg)
-    print("EXIT1")
+    while e.isSet():
+        try:
+            input_text = connectionSocket.recv(1024).decode().split()
+            outputpanel = top.Scrolledtext1
+            command = input_text[0].lower()
+            print(input_text)
+            if command == 'quit':
+                break
 
+            index = input_text[1]
 
+            if command == 'backspace':
+                index_ar = index.split('.')
+                index_ar[1] = str(int(index_ar[1]) - 1)
+                index = ".".join(index_ar)
+                outputpanel.delete(index)
+
+            elif command == 'delete':
+                outputpanel.delete(index)
+
+            elif command == 'tab':
+                outputpanel.insert(index, "    ")
+
+            elif command == 'space':
+                outputpanel.insert(index, " ")
+
+            elif command == 'return':
+                outputpanel.insert(index, "\n")
+
+            else:
+                try:
+                    char = input_text[2]
+                    outputpanel.delete(index)
+                    outputpanel.insert(index, char)
+                except IndexError:
+                    print("not insert key")
+
+        except OSError:
+            break
+
+def close_connections():
+    global peer_connections
+    clientSocket.send("end".encode())
+    clientSocket.close()
+    for peer in peer_connections:
+        peer.send("end".encode())
+        peer.close()
+
+already_connected = False
 def connect_peers(outputpanel, top):
     global peer_connections
-    for peer in peers_list:
-        print(peer)
-        peer_server = peer.split(",")[0]
-        peer_socket = int(peer.split(",")[1])
-        peer_conn = socket(AF_INET,SOCK_STREAM)
-        peer_conn.connect((peer_server,peer_socket))
-        t = threading.Thread(target=handle_connection, args=(peer_conn, top))
-        t.start()
-        tlist.append(t)
-        outputpanel.configure(state=NORMAL)
-        outputpanel.insert(END, "Connected to peer: " + peer_server + "\n")
-        outputpanel.configure(state=DISABLED)
-        peer_connections.append(peer_conn)
+    global already_connected
+    if not already_connected:
+        try:
+            for peer in peers_list:
+                print(peer)
+                peer_server = peer.split(",")[0]
+                peer_socket = int(peer.split(",")[1])
+                peer_conn = socket(AF_INET,SOCK_STREAM)
+                peer_conn.connect((peer_server,peer_socket))
+                code = peer_conn.recv(1024).decode()
+                # loads the code from peer
+                top.Scrolledtext1.insert(1.0, code)
+                t = threading.Thread(target=handle_connection, args=(peer_conn, top))
+                t.start()
+                tlist.append(t)
+                outputpanel.configure(state=NORMAL)
+                outputpanel.insert(END, "Connected to peer: " + peer_server + "\n")
+                outputpanel.configure(state=DISABLED)
+                peer_connections.append(peer_conn)
+                already_connected = True
+        except KeyboardInterrupt:
+                joinAll()
 
 def disconnect_peers():
     global peer_connections
@@ -89,9 +149,6 @@ def disconnect_peers():
         conn.shutdown(SHUT_RDWR)
         conn.close()
 
-def joinAll():
-    for t in tlist:
-        t.join()
 
 def vp_start_gui():
     '''Starting point when module is the main routine.'''
@@ -108,15 +165,9 @@ def vp_start_gui():
 
 def handle_close():
     global root
-    global alive
-    alive = False
-    endingSock = socket()
-    endingSock.connect((serverName, client_socket))
-    peer_server.shutdown(SHUT_RDWR)
-    peer_server.close()
-
-    disconnect_peers()
+    e.clear()
     root.destroy()
+    close_connections()
     joinAll()
 
 w = None
@@ -129,32 +180,23 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def destroy_CodeSharer():
-    global w
-    joinAll()
-    w.destroy()
-    w = None
-
 def send_code(event):
-    global sent_buffer_count
-    inputtext = event.widget.get(1.0, END).strip()
-    send_buffer = inputtext[sent_buffer_count:]
-    sent_buffer_count = sent_buffer_count + len(send_buffer)
-    print(send_buffer)
-    if send_buffer:
-        for conn in peer_connections:
-            print(conn)
-            conn.send(send_buffer.encode())
+    input_text = event.char
+    index = event.widget.index('insert')
+    to_send = event.keysym + " " + index + " " + input_text
+    for conn in peer_connections:
+        conn.send(to_send.encode())
     return
 
-def run_code(st, outputLabel, language):
-    code = st.get(1.0, END)
+def run_code(input, outputLabel, language):
+    code = input.get(1.0, END)
+    print("to run", code)
+    print(language)
     if not code.strip() == "" and not code == None:
         toSend = language + " " + code
         clientSocket.send(toSend.encode())
         output = clientSocket.recv(1024).decode()
         outputLabel.configure(state=NORMAL)
-        outputLabel.insert(END, "-----------\n")
         outputLabel.insert(END, output)
         outputLabel.configure(state=DISABLED)
     else:
@@ -219,7 +261,8 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.bind("<Leave>", send_code)
+        self.Scrolledtext1.bind("<Key>", send_code)
+        # self.Scrolledtext1.bind("<Tab>", send_code)
 
         def tab(arg):
             self.Scrolledtext1.insert(INSERT, " " * 4)
