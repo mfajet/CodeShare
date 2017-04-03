@@ -15,6 +15,7 @@ try:
     py3 = 0
 except ImportError:
     import tkinter.ttk as ttk
+    import tkinter.font as tkfont
     py3 = 1
 
 import mydisplay_support as display_support
@@ -47,19 +48,16 @@ try:
 except OSError:
     joinAll()
 
-sent_buffer_count = 0
-
 print(peers_list)
 alive = True
+
 def accept_connections(server, top):
     try:
         while e.isSet():
             connectionSocket, addr = server.accept()
             # sends the current code to the peers
-            if top.Scrolledtext1.get(1.0, END).strip():
-                connectionSocket.send(top.Scrolledtext1.get(1.0, END).encode())
-            else:
-                connectionSocket.send("e".encode())
+            current = top.Scrolledtext1.get(1.0, END).strip() or "___null___"
+            connectionSocket.send(current.encode())
             t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
             top.Scrolledtext2.configure(state=NORMAL)
             top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
@@ -84,7 +82,7 @@ def handle_connection(connectionSocket, top):
             print(input_text)
             if command == "end":
                 break
-
+                
             index = input_text[1]
 
             if command == "backspace":
@@ -132,18 +130,26 @@ def handle_connection(connectionSocket, top):
         except OSError:
             break
 
+
+def disconnect_peers():
+    global peer_connections
+    for conn in peer_connections:
+        conn.send("end".encode())
+        conn.shutdown(SHUT_RD)
+        conn.close()
+
 def close_connections():
     global peer_connections
     clientSocket.send("end".encode())
+    clientSocket.shutdown(SHUT_RD)
     clientSocket.close()
-    for peer in peer_connections:
-        peer.send("end".encode())
-        peer.close()
+    disconnect_peers()
 
 already_connected = False
 def connect_peers(outputpanel, top):
     global peer_connections
     global already_connected
+    peer_conn = None
     if not already_connected:
         try:
             for peer in peers_list:
@@ -151,10 +157,10 @@ def connect_peers(outputpanel, top):
                 peer_server = peer.split(",")[0]
                 peer_socket = int(peer.split(",")[1])
                 peer_conn = socket(AF_INET,SOCK_STREAM)
-                peer_conn.connect((peer_server,peer_socket))
+                peer_conn.connect((peer_server,peer_socket))  
                 code = peer_conn.recv(1024).decode()
-                # loads the code from peer
-                top.Scrolledtext1.insert(1.0, code)
+                if code != "___null___" and not already_connected:
+                    top.Scrolledtext1.insert(1.0, code)  
                 t = threading.Thread(target=handle_connection, args=(peer_conn, top))
                 t.start()
                 tlist.append(t)
@@ -163,15 +169,9 @@ def connect_peers(outputpanel, top):
                 outputpanel.configure(state=DISABLED)
                 peer_connections.append(peer_conn)
                 already_connected = True
-        except KeyboardInterrupt:
-                joinAll()
 
-def disconnect_peers():
-    global peer_connections
-    for conn in peer_connections:
-        conn.send("leaving".encode())
-        conn.shutdown(SHUT_RDWR)
-        conn.close()
+        except OSError as e:
+                print("Socket err", e)
 
 def vp_start_gui():
     """Starting point when module is the main routine."""
@@ -210,7 +210,7 @@ def hande_keyboard(event):
     start = None
     end = None
     input_text = ""
-
+   
     try:
         input_text = str(ord(event.char))
         start = event.widget.index(SEL_FIRST)
@@ -221,16 +221,19 @@ def hande_keyboard(event):
         print("nothing is selected")
         
 
-    index = event.widget.index("insert")
+    index = event.widget.index(INSERT)
+
     if start and end:
         to_send = "replace " + start + " " + end + " " + input_text
     else:
         to_send = event.keysym + " " + index + " " + input_text
     
-    print(to_send)
-    for conn in peer_connections:
-        conn.send(to_send.encode("ascii"))
+    send_update(to_send)
     return
+
+def send_update(to_send):
+    for conn in peer_connections:
+        conn.send(to_send.encode())
 
 def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
@@ -299,6 +302,7 @@ class CodeSharer:
 
         self.Scrolledtext1 = ScrolledText(top)
 
+        
         self.Scrolledtext1.configure()
         self.Scrolledtext1.place(relx=0.0, rely=0.07, relheight=0.87
                 , relwidth=0.52)
@@ -307,19 +311,11 @@ class CodeSharer:
         self.Scrolledtext1.configure(insertborderwidth="3")
         self.Scrolledtext1.configure(selectbackground="#c4c4c4")
         self.Scrolledtext1.configure(takefocus="0")
-        self.Scrolledtext1.configure(tabs="    ")
+        self.Scrolledtext1.configure(tabs=tkfont.Font(font=self.Scrolledtext1['font']).measure(" "*4))
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
         self.Scrolledtext1.bind("<Key>", hande_keyboard)
-        # tab event not firing
-        self.Scrolledtext1.bind("<Tab>", handle_tab)
-
-        def tab(arg):
-            self.Scrolledtext1.insert(INSERT, " " * 4)
-            return "break"
-
-        self.Scrolledtext1.bind("<Tab>", tab)
 
         self.TCombobox1 = ttk.Combobox(top)
         self.TCombobox1.place(relx=0.19, rely=0.02, relheight=0.03
