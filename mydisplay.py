@@ -12,10 +12,12 @@ except ImportError:
 
 try:
     import ttk
+    import TKFileDialog
     py3 = 0
 except ImportError:
     import tkinter.ttk as ttk
     import tkinter.font as tkfont
+    import tkinter.filedialog as FileDialog
     py3 = 1
 
 import mydisplay_support as display_support
@@ -98,7 +100,7 @@ def handle_peer(connectionSocket, outputpanel, send=False):
             outputpanel.insert(1.0, code) 
                 
     while e.isSet():
-        try:   
+        try:
             input_text = connectionSocket.recv(1024).decode().split()
             command = input_text[0].lower()
             print(input_text)
@@ -108,7 +110,6 @@ def handle_peer(connectionSocket, outputpanel, send=False):
             if command == "end":
                 break
 
-            
             index = input_text[1]
 
             if command == "backspace":
@@ -117,20 +118,20 @@ def handle_peer(connectionSocket, outputpanel, send=False):
                 char_index = int(index_ar[1]) - 1
                 index_ar[1] = str(char_index)
                 index = ".".join(index_ar)
-                if char_index >= 0: 
-                    outputpanel.delete(index)   
-                # backspace reached the beginning of the line, move the line up 
+                if char_index >= 0:
+                    outputpanel.delete(index)
+                # backspace reached the beginning of the line, move the line up
                 if char_index == -1 and line_index > 1:
                     index = str(line_index - 1)+".end"
                     outputpanel.delete(index)
-            
+
             elif command == "replace":
                 start = input_text[1]
                 end = input_text[2]
                 char = input_text[3]
-                
+
                 try:
-                    text = escaped_chars[char] 
+                    text = escaped_chars[char]
                 except KeyError:
                     text = chr(int(char))
 
@@ -139,20 +140,20 @@ def handle_peer(connectionSocket, outputpanel, send=False):
 
             elif command == "delete":
                 outputpanel.delete(index)
-            
+
             else:
                 try:
                     char = input_text[2]
                     try:
-                        text = escaped_chars[char] 
+                        text = escaped_chars[char]
                     except KeyError:
-                        text = str(chr(int(char)))   
+                        text = str(chr(int(char)))
 
-                    outputpanel.insert(index, text)  
-             
+                    outputpanel.insert(index, text)
+
                 except IndexError:
                     print("not a char")
-           
+
         except OSError:
             break
 
@@ -191,6 +192,7 @@ def connect_peers(top):
                 top.Scrolledtext2.configure(state=DISABLED) 
                
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
+
                 t.start()
                 tlist.append(t)
                 
@@ -223,6 +225,18 @@ def vp_start_gui():
     t = threading.Thread(target=accept_connections, args=(peer_server, top))
     t.start()
     tlist.append(t)
+
+    ######This code taken from https://mail.python.org/pipermail/tkinter-discuss/2015-August/003762.html
+    try:
+        root.tk.call('tk_getOpenFile', '-foobarbaz')
+    except TclError:
+        pass
+    # now set the magic variables accordingly
+    root.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
+    root.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+    #####################################################
+
+
     root.mainloop()
 
 
@@ -250,7 +264,7 @@ def hande_keyboard(event):
     start = None
     end = None
     input_text = ""
-   
+
     try:
         input_text = str(ord(event.char))
         start = event.widget.index(SEL_FIRST)
@@ -259,7 +273,7 @@ def hande_keyboard(event):
         print("not a char")
     except TclError:
         print("nothing is selected")
-        
+
 
     index = event.widget.index(INSERT)
 
@@ -267,7 +281,7 @@ def hande_keyboard(event):
         to_send = "replace " + start + " " + end + " " + input_text
     else:
         to_send = event.keysym + " " + index + " " + input_text
-    
+
     send_update(to_send)
     return
 
@@ -298,6 +312,26 @@ def send_message(entry, box):
         box.configure(state=DISABLED)
         entry.delete(0,END)
         box.see(END)
+
+def load_file(code_textbox):
+    fname = FileDialog.askopenfilename(filetypes=(("Haskell files", "*.hs"),
+                                           ("Python files", "*.py;*.pyc"),
+                                           ("All files", "*.*") ))
+    if fname:
+        text = ""
+        try:
+            f = open(fname,"r")
+            while True:
+                data = f.read()
+                if (not data or data == '' or len(data) <= 0):
+                    f.close()
+                    break
+                text+=data
+            code_textbox.delete(1.0,END)
+            code_textbox.insert(END,text)
+        except:                     # <- naked except is a bad idea
+            showerror("Open Source File", "Failed to read file\n'%s'" % fname)
+        return
 
 class CodeSharer:
     def __init__(self, top=None):
@@ -337,12 +371,12 @@ class CodeSharer:
         self.Label2.place(relx=0.0, rely=0.95, height=28, width=766)
         self.Label2.configure(anchor=W)
         self.Label2.configure(justify=LEFT)
-        self.Label2.configure(text="""Who"s typing:""")
+        self.Label2.configure(text="""Who's typing:""")
         self.Label2.configure(width=766)
 
         self.Scrolledtext1 = ScrolledText(top)
 
-        
+
         self.Scrolledtext1.configure()
         self.Scrolledtext1.place(relx=0.0, rely=0.07, relheight=0.87
                 , relwidth=0.52)
@@ -417,6 +451,13 @@ class CodeSharer:
         self.Label1 = Label(top)
         self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)
         self.Label1.configure(text='''Chat with peers''')
+
+        self.Button3 = Button(top)
+        self.Button3.place(relx=00, rely=0.0, relheight=0.05, relwidth=.08)
+        self.Button3.configure(activebackground="#d9d9d9")
+        self.Button3.configure(text='''Open''')
+        self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1)))
+
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
