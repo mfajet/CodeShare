@@ -24,6 +24,7 @@ from socket import *
 serverName = "127.0.0.1"
 serverPort = 2110
 peer_connections = []
+chat_connections = []
 tlist = []
 clientSocket = socket(AF_INET,SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
@@ -56,33 +57,58 @@ def accept_connections(server, top):
         while e.isSet():
             connectionSocket, addr = server.accept()
             # sends the current code to the peers
-            current = top.Scrolledtext1.get(1.0, END).strip() or "___null___"
-            connectionSocket.send(current.encode())
-            t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
-            top.Scrolledtext2.configure(state=NORMAL)
-            top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
-            top.Scrolledtext2.configure(state=DISABLED)
+            msg = connectionSocket.recv(1024).decode()
+
+            if msg == "___peer___":
+                t = threading.Thread(target=handle_peer, args=(connectionSocket, top.Scrolledtext1, True))
+                top.Scrolledtext2.configure(state=NORMAL)
+                top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
+                top.Scrolledtext2.configure(state=DISABLED)
+            elif msg == "___chat___":
+                t = threading.Thread(target=handle_chat, args=(connectionSocket, top.Scrolledtext3))
+                top.Scrolledtext3.configure(state=NORMAL)
+                top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
+                top.Scrolledtext3.configure(state=DISABLED)
+            
+            
             t.start()
             tlist.append(t)
             peer_connections.append(connectionSocket)
+
     except KeyboardInterrupt:
         joinAll()
 
-def handle_connection(connectionSocket, top):
+def handle_chat(connectionSocket, outputpanel):
+    print("chat")
+
+def handle_peer(connectionSocket, outputpanel, send=False):
+    
     escaped_chars = {
         "13": "\n",
         "127": "",
         "8": ""
     }
+    
+    if send:
+        current = outputpanel.get(1.0, END).strip() or "___null___"
+        connectionSocket.send(current.encode())
+    else:
+        code = connectionSocket.recv(1024).decode()
+        if code != "___null___":
+            outputpanel.insert(1.0, code) 
+                
     while e.isSet():
         try:   
             input_text = connectionSocket.recv(1024).decode().split()
-            outputpanel = top.Scrolledtext1
             command = input_text[0].lower()
             print(input_text)
+            if command == "___null___":
+                continue
+                
             if command == "end":
                 break
-                
+
+            
             index = input_text[1]
 
             if command == "backspace":
@@ -146,28 +172,42 @@ def close_connections():
     disconnect_peers()
 
 already_connected = False
-def connect_peers(outputpanel, top):
+def connect_peers(top):
     global peer_connections
+    global chat_connections
     global already_connected
     peer_conn = None
     if not already_connected:
         try:
             for peer in peers_list:
-                print(peer)
-                peer_server = peer.split(",")[0]
-                peer_socket = int(peer.split(",")[1])
-                peer_conn = socket(AF_INET,SOCK_STREAM)
-                peer_conn.connect((peer_server,peer_socket))  
-                code = peer_conn.recv(1024).decode()
-                if code != "___null___" and not already_connected:
-                    top.Scrolledtext1.insert(1.0, code)  
-                t = threading.Thread(target=handle_connection, args=(peer_conn, top))
+                server = peer.split(",")[0]
+                socket_number = int(peer.split(",")[1])
+                peer_socket = socket(AF_INET,SOCK_STREAM)
+                peer_socket.connect((server,socket_number)) 
+                peer_socket.send("___peer___".encode()) 
+                
+                top.Scrolledtext2.configure(state=NORMAL)
+                top.Scrolledtext2.insert(END, "Connected to peer: " + server + "\n")
+                top.Scrolledtext2.configure(state=DISABLED) 
+               
+                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
                 t.start()
                 tlist.append(t)
-                outputpanel.configure(state=NORMAL)
-                outputpanel.insert(END, "Connected to peer: " + peer_server + "\n")
-                outputpanel.configure(state=DISABLED)
-                peer_connections.append(peer_conn)
+                
+                chat_socket = socket(AF_INET, SOCK_STREAM)
+                chat_socket.connect((server,socket_number))
+                chat_socket.send("___chat___".encode())
+                
+                t = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
+                t.start()
+                tlist.append(t)
+                
+                top.Scrolledtext3.configure(state=NORMAL)
+                top.Scrolledtext3.insert(END, "Connected to chat: " + server + "\n", "right")
+                top.Scrolledtext3.configure(state=DISABLED)
+                
+                peer_connections.append(peer_socket)
+                chat_connections.append(chat_socket)
                 already_connected = True
 
         except OSError as e:
@@ -289,7 +329,7 @@ class CodeSharer:
         self.Button1 = Button(top)
         self.Button1.place(relx=0.60, rely=0.02, height=26, width=120)
         self.Button1.configure(activebackground="#d9d9d9")
-        self.Button1.configure(command=(lambda : connect_peers(self.Scrolledtext2, self)))
+        self.Button1.configure(command=(lambda : connect_peers(self)))
         self.Button1.configure(text="""Connect to peers""")
 
 
