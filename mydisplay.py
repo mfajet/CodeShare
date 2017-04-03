@@ -82,7 +82,7 @@ def handle_connection(connectionSocket, top):
             outputpanel = top.Scrolledtext1
             command = input_text[0].lower()
             print(input_text)
-            if command == "quit":
+            if command == "end":
                 break
 
             index = input_text[1]
