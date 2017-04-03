@@ -12,10 +12,12 @@ except ImportError:
 
 try:
     import ttk
+    import TKFileDialog
     py3 = 0
 except ImportError:
     import tkinter.ttk as ttk
     import tkinter.font as tkfont
+    import tkinter.filedialog as FileDialog
     py3 = 1
 
 import mydisplay_support as display_support
@@ -259,6 +261,26 @@ def send_message(entry, box):
         entry.delete(0,END)
         box.see(END)
 
+def load_file(code_textbox):
+    fname = FileDialog.askopenfilename(filetypes=(("Haskell files", "*.hs"),
+                                           ("Python files", "*.py;*.pyc"),
+                                           ("All files", "*.*") ))
+    if fname:
+        text = ""
+        try:
+            f = open(fname,"r")
+            while True:
+                data = f.read()
+                if (not data or data == '' or len(data) <= 0):
+                    f.close()
+                    break
+                text+=data
+            code_textbox.delete(1.0,END)
+            code_textbox.insert(END,text)
+        except:                     # <- naked except is a bad idea
+            showerror("Open Source File", "Failed to read file\n'%s'" % fname)
+        return
+
 class CodeSharer:
     def __init__(self, top=None):
         """This class configures and populates the toplevel window.
@@ -377,6 +399,13 @@ class CodeSharer:
         self.Label1 = Label(top)
         self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)
         self.Label1.configure(text='''Chat with peers''')
+
+        self.Button3 = Button(top)
+        self.Button3.place(relx=00, rely=0.0, relheight=0.05, relwidth=.08)
+        self.Button3.configure(activebackground="#d9d9d9")
+        self.Button3.configure(text='''Open''')
+        self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1)))
+
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
