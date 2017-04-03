@@ -185,6 +185,18 @@ def vp_start_gui():
     t = threading.Thread(target=accept_connections, args=(peer_server, top))
     t.start()
     tlist.append(t)
+
+    ######This code taken from https://mail.python.org/pipermail/tkinter-discuss/2015-August/003762.html
+    try:
+        root.tk.call('tk_getOpenFile', '-foobarbaz')
+    except TclError:
+        pass
+    # now set the magic variables accordingly
+    root.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
+    root.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+    #####################################################
+
+
     root.mainloop()
 
 
