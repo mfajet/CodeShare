@@ -205,6 +205,12 @@ def run_code(input, outputLabel, language):
         outputLabel.insert(END, "Empty file")
         outputLabel.configure(state=DISABLED)
 
+def send_message(entry, box):
+    message = entry.get()
+    box.configure(state=NORMAL)
+    box.insert(END, message + " - me\n", "right")
+    box.configure(state=DISABLED)
+    entry.delete(0,END)
 
 class CodeSharer:
     def __init__(self, top=None):
@@ -308,18 +314,24 @@ class CodeSharer:
         self.Scrolledtext3.configure(undo="1")
         self.Scrolledtext3.configure(width=10)
         self.Scrolledtext3.configure(wrap=WORD)
+        self.Scrolledtext3.tag_configure("right", justify="right")
+        self.Scrolledtext3.tag_configure("left", justify="left")
         self.Scrolledtext3.configure(state=DISABLED)
 
         self.Button2 = Button(top)
         self.Button2.place(relx=0.92, rely=0.89, relheight=0.05, relwidth=.08)
         self.Button2.configure(activebackground="#d9d9d9")
         self.Button2.configure(text='''Send''')
+        self.Button2.configure(command=(lambda: send_message(self.Entry1,self.Scrolledtext3)))
 
         self.Entry1 = Entry(top)
         self.Entry1.place(relx=0.52, rely=0.89, relheight=0.05, relwidth=0.4)
         self.Entry1.configure(background="white")
         self.Entry1.configure(font="TkFixedFont")
         self.Entry1.configure(width=306)
+        self.Entry1.bind("<Key-Return>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
+        self.Entry1.bind("<Key-KP_Enter>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
+        self.Entry1.bind("<Key-Insert>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
 
         self.Label1 = Label(top)
         self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)
