@@ -42,9 +42,10 @@ except KeyboardInterrupt:
 sent_buffer_count = 0
 
 print(peers_list)
-
+alive = True
 def accept_connections(server, top):
-    while True:
+    global alive
+    while alive:
         connectionSocket, addr = server.accept()
         t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
         top.Scrolledtext2.configure(state=NORMAL)
@@ -53,13 +54,16 @@ def accept_connections(server, top):
         t.start()
         tlist.append(t)
         peer_connections.append(connectionSocket)
+    print("EXIT2")
 
 def handle_connection(connectionSocket, top):
-    while True:
+    global alive
+    while alive:
         msg = connectionSocket.recv(1024).decode()
         outputpanel = top.Scrolledtext1
         outputpanel.configure(state=NORMAL)
         outputpanel.insert(END, msg)
+    print("EXIT1")
 
 
 def connect_peers(outputpanel, top):
@@ -77,6 +81,13 @@ def connect_peers(outputpanel, top):
         outputpanel.insert(END, "Connected to peer: " + peer_server + "\n")
         outputpanel.configure(state=DISABLED)
         peer_connections.append(peer_conn)
+
+def disconnect_peers():
+    global peer_connections
+    for conn in peer_connections:
+        conn.send("leaving".encode())
+        conn.shutdown(SHUT_RDWR)
+        conn.close()
 
 def joinAll():
     for t in tlist:
@@ -97,8 +108,14 @@ def vp_start_gui():
 
 def handle_close():
     global root
-    clientSocket.send("end".encode())
-    clientSocket.close()
+    global alive
+    alive = False
+    endingSock = socket()
+    endingSock.connect((serverName, client_socket))
+    peer_server.shutdown(SHUT_RDWR)
+    peer_server.close()
+
+    disconnect_peers()
     root.destroy()
     joinAll()
 
