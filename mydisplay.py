@@ -20,7 +20,7 @@ except ImportError:
 import display_support
 from socket import *
 
-serverName = '127.0.0.1'
+serverName = "127.0.0.1"
 serverPort = 2110
 peer_connections = []
 tlist = []
@@ -51,7 +51,10 @@ def accept_connections(server, top):
         while e.isSet():
             connectionSocket, addr = server.accept()
             # sends the current code to the peers
-            connectionSocket.send(top.Scrolledtext1.get(1.0, END).encode())
+            if top.Scrolledtext1.get(1.0, END).strip():
+                connectionSocket.send(top.Scrolledtext1.get(1.0, END).encode())
+            else:
+                connectionSocket.send("e".encode())
             t = threading.Thread(target=handle_connection, args=(connectionSocket, top))
             top.Scrolledtext2.configure(state=NORMAL)         
             top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
@@ -63,46 +66,68 @@ def accept_connections(server, top):
         joinAll()
 
 def handle_connection(connectionSocket, top):
+    escaped_chars = {
+        "13": "\n",
+        "127": "",
+        "8": ""
+    }
     while e.isSet():
         try:   
-            input_text = connectionSocket.recv(1024).decode().split()
+            input_text = connectionSocket.recv(1024).decode("ascii").split()
             outputpanel = top.Scrolledtext1
             command = input_text[0].lower()
             print(input_text)
-            if command == 'quit':
+            if command == "quit":
                 break
             
             index = input_text[1]
 
-            if command == 'backspace':
-                index_ar = index.split('.')
-                index_ar[1] = str(int(index_ar[1]) - 1)
-                index = ".".join(index_ar) 
-                outputpanel.delete(index)
+            if command == "backspace":
+                index_ar = index.split(".")
+                line_index = int(index_ar[0])
+                char_index = int(index_ar[1]) - 1
+                index_ar[1] = str(char_index)
+                index = ".".join(index_ar)
+                if char_index >= 0: 
+                    outputpanel.delete(index)   
+                # backspace reached the beginning of the line, move the line up 
+                if char_index == -1 and line_index > 1:
+                    index = str(line_index - 1)+".end"
+                    outputpanel.delete(index)
             
-            elif command == 'delete':
-                outputpanel.delete(index)
-            
-            elif command == 'tab':
-                outputpanel.insert(index, "    ")
+            elif command == "replace":
+                start = input_text[1]
+                end = input_text[2]
+                char = input_text[3]
+                
+                try:
+                    text = escaped_chars[char] 
+                except KeyError:
+                    text = chr(int(char))
 
-            elif command == 'space':
-                outputpanel.insert(index, " ")
+                outputpanel.delete(start, end)
+                outputpanel.insert(start, str(text))
+
+            elif command == "delete":
+                outputpanel.delete(index)
             
-            elif command == 'return':
-                outputpanel.insert(index, "\n")
-    
             else:
                 try:
                     char = input_text[2]
-                    outputpanel.delete(index)
-                    outputpanel.insert(index, char)  
+                    try:
+                        text = escaped_chars[char] 
+                    except KeyError:
+                        text = str(chr(int(char)))   
+
+                    outputpanel.insert(index, text)  
+             
                 except IndexError:
-                    print("not insert key")
+                    print("not a char")
            
         except OSError:
             break
-    
+
+
 def close_connections():
     global peer_connections
     clientSocket.send("end".encode())
@@ -122,7 +147,8 @@ def connect_peers(outputpanel, top):
             peer_conn.connect((peer_server,peer_socket))
             code = peer_conn.recv(1024).decode()
             # loads the code from peer
-            top.Scrolledtext1.insert(1.0, code)
+            if code != "e":
+                top.Scrolledtext1.insert(1.0, code)
             t = threading.Thread(target=handle_connection, args=(peer_conn, top))
             t.start()
             tlist.append(t)
@@ -139,7 +165,7 @@ def joinAll():
         t.join(timeout=1)
 
 def vp_start_gui():
-    '''Starting point when module is the main routine.'''
+    """Starting point when module is the main routine."""
     global val, w, root
     root = Tk()
     top = CodeSharer (root)
@@ -160,7 +186,7 @@ def handle_close():
    
 w = None
 def create_CodeSharer(root, *args, **kwargs):
-    '''Starting point when module is imported by another program.'''
+    """Starting point when module is imported by another program."""
     global w, w_win, rt
     rt = root
     w = Toplevel (root)
@@ -168,19 +194,38 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def send_code(event):
-    input_text = event.char
-    index = event.widget.index('insert')
-    to_send = event.keysym + " " + index + " " + input_text
+def handle_tab(event):
+    print("tab Event")
+
+def hande_keyboard(event):
+    start = None
+    end = None
+    input_text = ""
+
+    try:
+        input_text = str(ord(event.char))
+        start = event.widget.index(SEL_FIRST)
+        end = event.widget.index(SEL_LAST)
+    except TypeError:
+        print("not a char")
+    except TclError:
+        print("nothing is selected")
+        
+
+    index = event.widget.index("insert")
+    if start and end:
+        to_send = "replace " + start + " " + end + " " + input_text
+    else:
+        to_send = event.keysym + " " + index + " " + input_text
+    
+    print(to_send)
     for conn in peer_connections:
-        conn.send(to_send.encode())
+        conn.send(to_send.encode("ascii"))
     return
 
 def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
-    print("to run", code)
-    print(language)
-    if not code.strip() == "" and not code == None:
+    if code.strip() and code:
         toSend = language + " " + code
         clientSocket.send(toSend.encode())
         output = clientSocket.recv(1024).decode()
@@ -189,27 +234,26 @@ def run_code(input, outputLabel, language):
         outputLabel.configure(state=DISABLED)
     else:
         outputLabel.configure(state=NORMAL)
-        outputLabel.delete(1.0, END)
         outputLabel.insert(END, "Empty file")
         outputLabel.configure(state=DISABLED)
 
 
 class CodeSharer:
     def __init__(self, top=None):
-        '''This class configures and populates the toplevel window.
-           top is the toplevel containing window.'''
-        _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
-        _fgcolor = '#000000'  # X11 color: 'black'
-        _compcolor = '#d9d9d9' # X11 color: 'gray85'
-        _ana1color = '#d9d9d9' # X11 color: 'gray85'
-        _ana2color = '#d9d9d9' # X11 color: 'gray85'
+        """This class configures and populates the toplevel window.
+           top is the toplevel containing window."""
+        _bgcolor = "#d9d9d9"  # X11 color: "gray85"
+        _fgcolor = "#000000"  # X11 color: "black"
+        _compcolor = "#d9d9d9" # X11 color: "gray85"
+        _ana1color = "#d9d9d9" # X11 color: "gray85"
+        _ana2color = "#d9d9d9" # X11 color: "gray85"
         self.style = ttk.Style()
         if sys.platform == "win32":
-            self.style.theme_use('winnative')
-        self.style.configure('.',background=_bgcolor)
-        self.style.configure('.',foreground=_fgcolor)
-        self.style.map('.',background=
-            [('selected', _compcolor), ('active',_ana2color)])
+            self.style.theme_use("winnative")
+        self.style.configure(".",background=_bgcolor)
+        self.style.configure(".",foreground=_fgcolor)
+        self.style.map(".",background=
+            [("selected", _compcolor), ("active",_ana2color)])
 
         top.geometry("772x539+503+177")
         top.title("CodeSharer")
@@ -218,21 +262,21 @@ class CodeSharer:
         self.Button1.place(relx=0.48, rely=0.02, height=26, width=50)
         self.Button1.configure(activebackground="#d9d9d9")
         self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
-        self.Button1.configure(text='''Run''')
+        self.Button1.configure(text="""Run""")
 
 
         self.Button1 = Button(top)
         self.Button1.place(relx=0.60, rely=0.02, height=26, width=120)
         self.Button1.configure(activebackground="#d9d9d9")
         self.Button1.configure(command=(lambda : connect_peers(self.Scrolledtext2, self)))
-        self.Button1.configure(text='''Connect to peers''')
+        self.Button1.configure(text="""Connect to peers""")
 
 
         self.Label2 = Label(top)
         self.Label2.place(relx=0.0, rely=0.95, height=28, width=766)
         self.Label2.configure(anchor=W)
         self.Label2.configure(justify=LEFT)
-        self.Label2.configure(text='''Who's typing:''')
+        self.Label2.configure(text="""Who"s typing:""")
         self.Label2.configure(width=766)
 
         self.Scrolledtext1 = ScrolledText(top)
@@ -249,12 +293,13 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.bind("<Key>", send_code)
-        # self.Scrolledtext1.bind("<Tab>", send_code)
+        self.Scrolledtext1.bind("<Key>", hande_keyboard)
+        # tab event not firing
+        self.Scrolledtext1.bind("<Tab>", handle_tab)
         
         def tab(arg):
             self.Scrolledtext1.insert(INSERT, " " * 4)
-            return 'break'
+            return "break"
 
         self.Scrolledtext1.bind("<Tab>", tab)
 
@@ -283,23 +328,23 @@ class CodeSharer:
         self.Scrolledtext2.configure(undo="1")
         self.Scrolledtext2.configure(width=10)
         self.Scrolledtext2.configure(wrap=NONE)
-        self.Scrolledtext2.insert(END, '''Output will show up here\n''')
+        self.Scrolledtext2.insert(END, """Output will show up here\n""")
         self.Scrolledtext2.configure(state=DISABLED)
 
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
-    '''Configure the scrollbars for a widget.'''
+    """Configure the scrollbars for a widget."""
 
     def __init__(self, master):
         #  Rozen. Added the try-except clauses so that this class
         #  could be used for scrolled entry widget for which vertical
         #  scrolling is not supported. 5/7/14.
         try:
-            vsb = ttk.Scrollbar(master, orient='vertical', command=self.yview)
+            vsb = ttk.Scrollbar(master, orient="vertical", command=self.yview)
         except:
             pass
-        hsb = ttk.Scrollbar(master, orient='horizontal', command=self.xview)
+        hsb = ttk.Scrollbar(master, orient="horizontal", command=self.xview)
 
         #self.configure(yscrollcommand=_autoscroll(vsb),
         #    xscrollcommand=_autoscroll(hsb))
@@ -309,12 +354,12 @@ class AutoScroll(object):
             pass
         self.configure(xscrollcommand=self._autoscroll(hsb))
 
-        self.grid(column=0, row=0, sticky='nsew')
+        self.grid(column=0, row=0, sticky="nsew")
         try:
-            vsb.grid(column=1, row=0, sticky='ns')
+            vsb.grid(column=1, row=0, sticky="ns")
         except:
             pass
-        hsb.grid(column=0, row=1, sticky='ew')
+        hsb.grid(column=0, row=1, sticky="ew")
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_rowconfigure(0, weight=1)
@@ -328,12 +373,12 @@ class AutoScroll(object):
                   + Place.__dict__.keys()
 
         for meth in methods:
-            if meth[0] != '_' and meth not in ('config', 'configure'):
+            if meth[0] != "_" and meth not in ("config", "configure"):
                 setattr(self, meth, getattr(master, meth))
 
     @staticmethod
     def _autoscroll(sbar):
-        '''Hide and show scrollbar as needed.'''
+        """Hide and show scrollbar as needed."""
         def wrapped(first, last):
             first, last = float(first), float(last)
             if first <= 0 and last >= 1:
@@ -347,8 +392,8 @@ class AutoScroll(object):
         return str(self.master)
 
 def _create_container(func):
-    '''Creates a ttk Frame with a given master, and use this new frame to
-    place the scrollbars and the widget.'''
+    """Creates a ttk Frame with a given master, and use this new frame to
+    place the scrollbars and the widget."""
     def wrapped(cls, master, **kw):
         container = ttk.Frame(master)
         return func(cls, container, **kw)
@@ -356,12 +401,12 @@ def _create_container(func):
 
 
 class ScrolledText(AutoScroll, Text):
-    '''A standard Tkinter Text widget with scrollbars that will
-    automatically show/hide as needed.'''
+    """A standard Tkinter Text widget with scrollbars that will
+    automatically show/hide as needed."""
     @_create_container
     def __init__(self, master, **kw):
         Text.__init__(self, master, **kw)
         AutoScroll.__init__(self, master)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     vp_start_gui()
