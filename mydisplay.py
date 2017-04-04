@@ -12,12 +12,15 @@ except ImportError:
 
 try:
     import ttk
-    import TKFileDialog
+    import TKFileDialog as FileDialog
+    import tkMessageBox as messagebox
     py3 = 0
 except ImportError:
     import tkinter.ttk as ttk
     import tkinter.font as tkfont
     import tkinter.filedialog as FileDialog
+    from tkinter import messagebox
+
     py3 = 1
 
 import mydisplay_support as display_support
@@ -71,12 +74,11 @@ def accept_connections(server, top):
                 top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
             elif msg == "___chat___":
-                chat_connections.append(connectionSocket)                
+                chat_connections.append(connectionSocket)
                 t = threading.Thread(target=handle_chat, args=(connectionSocket, top.Scrolledtext3))
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
-            
             t.start()
             tlist.append(t)
             peer_connections.append(connectionSocket)
@@ -96,21 +98,21 @@ def handle_chat(connectionSocket, outputpanel):
             print("socket error", err)
 
 def handle_peer(connectionSocket, outputpanel, send=False):
-    
+
     escaped_chars = {
         "13": "\n",
         "127": "",
         "8": ""
     }
-    
+
     if send:
         current = outputpanel.get(1.0, END).strip() or "___null___"
         connectionSocket.send(current.encode())
     else:
         code = connectionSocket.recv(1024).decode()
         if code != "___null___":
-            outputpanel.insert(1.0, code) 
-                
+            outputpanel.insert(1.0, code)
+
     while e.isSet():
         try:
             input_text = connectionSocket.recv(1024).decode().split()
@@ -118,7 +120,7 @@ def handle_peer(connectionSocket, outputpanel, send=False):
             print(input_text)
             if command == "___null___":
                 continue
-                
+
             if command == "end":
                 break
 
@@ -194,30 +196,30 @@ def connect_peers(top):
                 server = peer.split(",")[0]
                 socket_number = int(peer.split(",")[1])
                 peer_socket = socket(AF_INET,SOCK_STREAM)
-                peer_socket.connect((server,socket_number)) 
-                peer_socket.send("___peer___".encode()) 
-                
+                peer_socket.connect((server,socket_number))
+                peer_socket.send("___peer___".encode())
+
                 top.Scrolledtext2.configure(state=NORMAL)
                 top.Scrolledtext2.insert(END, "Connected to peer: " + server + "\n")
-                top.Scrolledtext2.configure(state=DISABLED) 
-               
+                top.Scrolledtext2.configure(state=DISABLED)
+
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
 
                 t.start()
                 tlist.append(t)
-                
+
                 chat_socket = socket(AF_INET, SOCK_STREAM)
                 chat_socket.connect((server,socket_number))
                 chat_socket.send("___chat___".encode())
-                
+
                 t1 = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
                 t1.start()
                 tlist.append(t1)
-                
+
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, "Connected to peer: " + server + "\n", "right")
                 top.Scrolledtext3.configure(state=DISABLED)
-                
+
                 peer_connections.append(peer_socket)
                 chat_connections.append(chat_socket)
                 already_connected = True
@@ -355,6 +357,14 @@ def load_file(code_textbox):
             showerror("Open Source File", "Failed to read file\n'%s'" % fname)
         return
 
+def join_room(room_name, message):
+    print(room_name)
+    message.destroy()
+
+def create_room(message):
+    print("Room will be created")
+    message.destroy()
+
 class CodeSharer:
     def __init__(self, top=None):
         """This class configures and populates the toplevel window.
@@ -364,6 +374,10 @@ class CodeSharer:
         _compcolor = "#d9d9d9" # X11 color: "gray85"
         _ana1color = "#d9d9d9" # X11 color: "gray85"
         _ana2color = "#d9d9d9" # X11 color: "gray85"
+        font11 = "-family {Bitstream Vera Sans} -size 14 -weight "  \
+            "normal -slant roman -underline 0 -overstrike 0"
+        font9 = "-family {Bitstream Vera Sans} -size 21 -weight normal"  \
+            " -slant roman -underline 0 -overstrike 0"
         self.style = ttk.Style()
         if sys.platform == "win32":
             self.style.theme_use("winnative")
@@ -479,6 +493,52 @@ class CodeSharer:
         self.Button3.configure(activebackground="#d9d9d9")
         self.Button3.configure(text='''Open''')
         self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1)))
+
+        self.Message1 = Message(top)
+        self.Message1.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
+        self.Message1.configure(anchor=N)
+        self.Message1.configure(font=font9)
+        self.Message1.configure(pady="10")
+        self.Message1.configure(text='''Join a coding room''')
+        self.Message1.configure(width=773)
+
+        self.Label6 = Label(self.Message1)
+        self.Label6.place(relx=0.37, rely=0.20, height=28, width=50)
+        self.Label6.configure(activebackground="#f9f9f9")
+        self.Label6.configure(text='''Room #''')
+
+        self.Label4 = Label(self.Message1)
+        self.Label4.place(relx=0.38, rely=0.15, height=28, width=206)
+        self.Label4.configure(activebackground="#f9f9f9")
+        self.Label4.configure(font=font11)
+        self.Label4.configure(text='''Join an existing room''')
+
+        self.Entry2 = Entry(self.Message1)
+        self.Entry2.place(relx=0.42, rely=0.20, relheight=0.05, relwidth=0.25)
+        self.Entry2.configure(background="white")
+        self.Entry2.configure(font="TkFixedFont")
+        self.Entry2.configure(width=306)
+
+        self.Button4 = Button(self.Message1)
+        self.Button4.place(relx=0.47, rely=0.25, height=26, width=65)
+        self.Button4.configure(activebackground="#d9d9d9")
+        self.Button4.configure(text='''Join''')
+        self.Button4.configure(command=(lambda : join_room(self.Entry2.get(), self.Message1)))
+
+
+        self.Label5 = Label(self.Message1)
+        self.Label5.place(relx=0.38, rely=0.33, height=28, width=206)
+        self.Label5.configure(activebackground="#f9f9f9")
+        self.Label5.configure(font=font11)
+        self.Label5.configure(text='''Create a new room''')
+
+        self.Button5 = Button(self.Message1)
+        self.Button5.place(relx=0.47, rely=0.42, height=26, width=65)
+        self.Button5.configure(activebackground="#d9d9d9")
+        self.Button5.configure(text='''Create''')
+        self.Button5.configure(command=(lambda: create_room(self.Message1)))
+
+
 
 
 # The following code is added to facilitate the Scrolled widgets you specified.
