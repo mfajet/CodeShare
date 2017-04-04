@@ -9,13 +9,13 @@ import os
 ## global variables
 tList = []
 peers_list = []
+chat_rooms = []
 peer_base_port = 3000
 
 def clientThread(connectionSocket, addr):
     peer = None
     try:
         print ("Thread Client Entering Now...")
-        # print (addr)
         host, socket = addr
 
         peer = host + "," + str(peer_base_port + len(peers_list))
