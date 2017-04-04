@@ -60,7 +60,7 @@ def join_room(room, message, s,label):
         label.configure(relief=FLAT,  state='readonly')
         peers_list = []
     else:
-        label.insert(END, room_name)
+        label.insert(END, room)
         label.configure(relief=FLAT,  state='readonly')
         peers_list = potential_list
         peer_info = peers_list[0]
