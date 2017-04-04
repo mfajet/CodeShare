@@ -74,8 +74,8 @@ def accept_connections(server, top):
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
-            
-            
+
+
             t.start()
             tlist.append(t)
             peer_connections.append(connectionSocket)
@@ -87,21 +87,21 @@ def handle_chat(connectionSocket, outputpanel):
     print("chat")
 
 def handle_peer(connectionSocket, outputpanel, send=False):
-    
+
     escaped_chars = {
         "13": "\n",
         "127": "",
         "8": ""
     }
-    
+
     if send:
         current = outputpanel.get(1.0, END).strip() or "___null___"
         connectionSocket.send(current.encode())
     else:
         code = connectionSocket.recv(1024).decode()
         if code != "___null___":
-            outputpanel.insert(1.0, code) 
-                
+            outputpanel.insert(1.0, code)
+
     while e.isSet():
         try:
             input_text = connectionSocket.recv(1024).decode().split()
@@ -109,7 +109,7 @@ def handle_peer(connectionSocket, outputpanel, send=False):
             print(input_text)
             if command == "___null___":
                 continue
-                
+
             if command == "end":
                 break
 
@@ -187,30 +187,30 @@ def connect_peers(top):
                 server = peer.split(",")[0]
                 socket_number = int(peer.split(",")[1])
                 peer_socket = socket(AF_INET,SOCK_STREAM)
-                peer_socket.connect((server,socket_number)) 
-                peer_socket.send("___peer___".encode()) 
-                
+                peer_socket.connect((server,socket_number))
+                peer_socket.send("___peer___".encode())
+
                 top.Scrolledtext2.configure(state=NORMAL)
                 top.Scrolledtext2.insert(END, "Connected to peer: " + server + "\n")
-                top.Scrolledtext2.configure(state=DISABLED) 
-               
+                top.Scrolledtext2.configure(state=DISABLED)
+
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
 
                 t.start()
                 tlist.append(t)
-                
+
                 chat_socket = socket(AF_INET, SOCK_STREAM)
                 chat_socket.connect((server,socket_number))
                 chat_socket.send("___chat___".encode())
-                
+
                 t = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
                 t.start()
                 tlist.append(t)
-                
+
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, "Connected to chat: " + server + "\n", "right")
                 top.Scrolledtext3.configure(state=DISABLED)
-                
+
                 peer_connections.append(peer_socket)
                 chat_connections.append(chat_socket)
                 already_connected = True
@@ -335,6 +335,12 @@ def load_file(code_textbox):
         except:                     # <- naked except is a bad idea
             showerror("Open Source File", "Failed to read file\n'%s'" % fname)
         return
+
+def join_room(room_name):
+    print(room_name)
+
+def create_room():
+    print("Room will be created")
 
 class CodeSharer:
     def __init__(self, top=None):
@@ -494,6 +500,7 @@ class CodeSharer:
         self.Button4.place(relx=0.47, rely=0.25, height=26, width=65)
         self.Button4.configure(activebackground="#d9d9d9")
         self.Button4.configure(text='''Join''')
+        self.Button4.configure(command=(lambda : join_room(self.Entry2.get())))
 
 
         self.Label5 = Label(top)
@@ -506,6 +513,7 @@ class CodeSharer:
         self.Button5.place(relx=0.47, rely=0.42, height=26, width=65)
         self.Button5.configure(activebackground="#d9d9d9")
         self.Button5.configure(text='''Create''')
+        self.Button5.configure(command=create_room)
 
 
 
