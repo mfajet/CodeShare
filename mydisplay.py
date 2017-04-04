@@ -4,6 +4,10 @@
 # In conjunction with Tcl version 8.6
 #    Apr 01, 2017 02:52:24 PM
 import sys, threading
+import pygments
+from pygments import lex
+from pygments.lexers import PythonLexer
+from pygments.lexers import HaskellLexer
 
 try:
     from Tkinter import *
@@ -46,6 +50,24 @@ peer_info=""
 peer_server = socket(AF_INET,SOCK_STREAM)
 peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 is_host = False
+
+def syntax_highlight(lang,codebox):
+    global tlist
+    print(lang)
+    if(lang.lower()=="haskell"):
+        lexer = HaskellLexer
+    else:
+        lexer=PythonLexer
+    def inner(lexer,codebox):
+        codebox.mark_set("range_start", "1.0")
+        data = codebox.get("1.0", END)
+        for token, content in lex(data, lexer()):
+            codebox.mark_set("range_end", "range_start + %dc" % len(content))
+            codebox.tag_add(str(token), "range_start", "range_end")
+            codebox.mark_set("range_start", "range_end")
+    t=threading.Thread(target=inner, args=(lexer,codebox))
+    t.start()
+    tlist.append(t)
 
 def join_room(room, message, s,label):
     global peers_list
@@ -115,7 +137,7 @@ def accept_connections(server, top):
             t = None
             connection, addr = server.accept()
             message = connection.recv(1024).decode()
-            
+
             if message == "___stop___":
                 connection.close()
                 connection = None
@@ -142,9 +164,9 @@ def accept_connections(server, top):
 def handle_chat(chat, outputpanel):
     while e.isSet():
         try:
-            message_ar = chat.recv(1024).decode().split("___space___")   
+            message_ar = chat.recv(1024).decode().split("___space___")
             if message_ar[0] == "___end___":
-                chat_connections.remove(chat)  
+                chat_connections.remove(chat)
                 try:
                     chat.send(("___end______space___" + gethostname()).encode())
                 except OSError:
@@ -153,7 +175,7 @@ def handle_chat(chat, outputpanel):
                 outputpanel.configure(state=NORMAL)
                 outputpanel.insert(END, message_ar[1] + " has left the chat", "left")
                 outputpanel.configure(state=DISABLED)
-               
+
                 break
             outputpanel.configure(state=NORMAL)
             outputpanel.insert(END, message_ar[0] + ": " + message_ar[1] + "\n", "left")
@@ -182,18 +204,18 @@ def handle_peer(codeshare, outputpanel, send=False):
     while e.isSet():
         try:
             input_text = codeshare.recv(1024).decode().split()
-            
+
             if not input_text:
                 break
-            
+
             command = input_text[0].lower()
             print(input_text)
-        
+
             if command == "___end___":
                 peer_connections.remove(codeshare)
                 codeshare.settimeout(1)
                 codeshare.send("___end___".encode())
-                print("ending connection")                
+                print("ending connection")
                 break
 
             index = input_text[1]
@@ -235,6 +257,8 @@ def handle_peer(codeshare, outputpanel, send=False):
                     except KeyError:
                         text = str(chr(int(char)))
 
+                    if text==' ' or text =='\n' or text == '\r' or text =='\t':
+                        syntax_highlight(display_support.combobox,outputpanel)
                     outputpanel.insert(index, text)
 
                 except IndexError:
@@ -260,7 +284,7 @@ def close_connections():
     disconnect_peers()
     clientSocket.send("___end___".encode())
     clientSocket.close()
-    
+
 
 def handle_close():
     global root
@@ -272,8 +296,8 @@ def handle_close():
     joinAll()
     root.destroy()
     root = None
-    
-    
+
+
 
 def stop_server():
     global client_port
@@ -357,11 +381,10 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def hande_keyboard(event):
+def handle_keyboard(event):
     start = None
     end = None
     input_text = ""
-
     try:
         input_text = str(ord(event.char))
         start = event.widget.index(SEL_FIRST)
@@ -370,9 +393,14 @@ def hande_keyboard(event):
         print("not a char")
     except TclError:
         print("nothing is selected")
-
-
     index = event.widget.index(INSERT)
+
+    try:
+        char = chr(int(input_text))
+        if char==' ' or char =='\n' or char == '\r' or char =='\t':
+            syntax_highlight(display_support.combobox,event.widget)
+    except e:
+        pass
 
     if start and end:
         to_send = "replace " + start + " " + end + " " + input_text
@@ -496,7 +524,23 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.bind("<Key>", hande_keyboard)
+        self.Scrolledtext1.bind("<Key>", handle_keyboard)
+        #self.Scrolledtext1.bind("<KeyRelease>",lambda e: syntax_highlight(display_support.combobox,self.Scrolledtext1))
+        self.Scrolledtext1.tag_configure("Token.Keyword", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Keyword.Constant", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Keyword.Declaration", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Keyword.Namespace", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Keyword.Pseudo", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Keyword.Reserved", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Keyword.Type", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Name.Class", foreground="#003D99")
+        self.Scrolledtext1.tag_configure("Token.Name.Exception", foreground="#003D99")
+        self.Scrolledtext1.tag_configure("Token.Name.Function", foreground="#003D99")
+        self.Scrolledtext1.tag_configure("Token.Operator.Word", foreground="#660029")
+        self.Scrolledtext1.tag_configure("Token.Comment.Multi", foreground="#3d3d3d")
+        self.Scrolledtext1.tag_configure("Token.Comment.Single", foreground="#3d3d3d")
+        self.Scrolledtext1.tag_configure("Token.Literal.String", foreground="#248F24")
+
 
         self.TCombobox1 = ttk.Combobox(top)
         self.TCombobox1.place(relx=0.19, rely=0.02, relheight=0.03
