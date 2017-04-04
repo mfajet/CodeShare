@@ -5,6 +5,7 @@
 #    Apr 01, 2017 02:52:24 PM
 import sys, threading
 import pygments
+from pygments.styles import get_style_by_name
 from pygments import lex
 from pygments.lexers import PythonLexer
 from pygments.lexers import HaskellLexer
@@ -257,7 +258,7 @@ def handle_peer(codeshare, outputpanel, send=False):
                     except KeyError:
                         text = str(chr(int(char)))
 
-                    if text==' ' or text =='\n' or text == '\r' or text =='\t':
+                    if text==' ' or text =='\n' or text == '\r' or text =='\t' or text=='(' or text =='\'' or text =='"':
                         syntax_highlight(display_support.combobox,outputpanel)
                     outputpanel.insert(index, text)
 
@@ -397,7 +398,7 @@ def handle_keyboard(event):
 
     try:
         char = chr(int(input_text))
-        if char==' ' or char =='\n' or char == '\r' or char =='\t':
+        if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
             syntax_highlight(display_support.combobox,event.widget)
     except e:
         pass
@@ -526,20 +527,29 @@ class CodeSharer:
         self.Scrolledtext1.configure(wrap=NONE)
         self.Scrolledtext1.bind("<Key>", handle_keyboard)
         #self.Scrolledtext1.bind("<KeyRelease>",lambda e: syntax_highlight(display_support.combobox,self.Scrolledtext1))
-        self.Scrolledtext1.tag_configure("Token.Keyword", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Keyword.Constant", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Keyword.Declaration", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Keyword.Namespace", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Keyword.Pseudo", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Keyword.Reserved", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Keyword.Type", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Name.Class", foreground="#003D99")
-        self.Scrolledtext1.tag_configure("Token.Name.Exception", foreground="#003D99")
-        self.Scrolledtext1.tag_configure("Token.Name.Function", foreground="#003D99")
-        self.Scrolledtext1.tag_configure("Token.Operator.Word", foreground="#660029")
-        self.Scrolledtext1.tag_configure("Token.Comment.Multi", foreground="#3d3d3d")
-        self.Scrolledtext1.tag_configure("Token.Comment.Single", foreground="#3d3d3d")
-        self.Scrolledtext1.tag_configure("Token.Literal.String", foreground="#248F24")
+        # self.Scrolledtext1.tag_configure("Token.Keyword", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Keyword.Constant", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Keyword.Declaration", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Keyword.Namespace", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Keyword.Pseudo", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Keyword.Reserved", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Keyword.Type", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Name.Class", foreground="#003D99")
+        # self.Scrolledtext1.tag_configure("Token.Name.Exception", foreground="#003D99")
+        # self.Scrolledtext1.tag_configure("Token.Name.Function", foreground="#003D99")
+        # self.Scrolledtext1.tag_configure("Token.Operator.Word", foreground="#660029")
+        # self.Scrolledtext1.tag_configure("Token.Comment.Multi", foreground="#3d3d3d")
+        # self.Scrolledtext1.tag_configure("Token.Comment.Single", foreground="#3d3d3d")
+        # self.Scrolledtext1.tag_configure("Token.Literal.String", foreground="#248F24")
+        style = get_style_by_name('default')
+
+        for token, predefined in style:
+            if predefined['color']:
+                foreground = "#%s" % predefined['color']
+            else:
+                foreground = None
+
+            self.Scrolledtext1.tag_configure(str(token), foreground=foreground)
 
 
         self.TCombobox1 = ttk.Combobox(top)
