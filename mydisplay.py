@@ -412,7 +412,7 @@ def send_message(entry, box):
     if message and not message == None:
         broadcast(message)
         box.configure(state=NORMAL)
-        box.insert(END, message + ": me\n", "right")
+        box.insert(END, message + " - me\n", "right")
         box.configure(state=DISABLED)
         entry.delete(0,END)
         box.see(END)
