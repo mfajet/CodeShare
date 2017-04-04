@@ -25,6 +25,7 @@ def unique_name():
 def clientThread(connectionSocket, addr):
     peer = None
     global peer_num
+    room_name = None
     try:
         print ("Thread Client Entering Now...")
         host, socket = addr
@@ -49,6 +50,8 @@ def clientThread(connectionSocket, addr):
             # print("inside while loop")
             msg = connectionSocket.recv(1024).decode()
             if msg == "___end___":
+                room_list_dict[room_name].remove(peer)
+                print(room_list_dict[room_name]) 
                 break
             if msg[0:7] == "python3":
                 cmd = 'python3 tempFile'

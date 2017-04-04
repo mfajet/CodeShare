@@ -36,7 +36,7 @@ clientSocket.connect((serverName,serverPort))
 peers_list = []
 # peers_list = clientSocket.recv(1024).decode().split()
 # peer_info = peers_list[0]
-# client_socket = int(peer_info.split(",")[1])
+# client_port = int(peer_info.split(",")[1])
 # peers_list.remove(peer_info)
 e = threading.Event()
 e.set()
@@ -45,12 +45,13 @@ peer_info=""
 
 peer_server = socket(AF_INET,SOCK_STREAM)
 peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+is_host = False
 
 def join_room(room, message, s,label):
     global peers_list
     global peer_info
     global room_name
-    global client_socket
+    global client_port
     clientSocket.send(room.encode())
     potential_list = clientSocket.recv(1024).decode().split()
     if potential_list[0] == "NEW_ROOM":
@@ -62,9 +63,9 @@ def join_room(room, message, s,label):
         label.configure(text="Room: " + room)
         peers_list = potential_list
         peer_info = peers_list[0]
-        client_socket = int(peer_info.split(",")[1])
+        client_port = int(peer_info.split(",")[1])
         peers_list.remove(peer_info)
-    client_socket = int(peer_info.split(",")[1])
+    client_port = int(peer_info.split(",")[1])
     connect_peers(s)
     message.destroy()
 
@@ -73,22 +74,22 @@ def create_room(message, top,label):
     global peers_list
     global peer_info
     global room_name
-    global client_socket
-
+    global client_port
+    global is_host
     clientSocket.send("NEW_ROOM".encode())
     reply = clientSocket.recv(1024).decode().split()
     room_name = reply[1]
     peers_list = []
     peer_info = reply[2]
-    client_socket = int(peer_info.split(",")[1])
+    client_port = int(peer_info.split(",")[1])
 
     try:
-        peer_server.bind((serverName, client_socket))
+        peer_server.bind((serverName, client_port))
         peer_server.listen(1)
+        is_host = True
         t = threading.Thread(target=accept_connections, args=(peer_server, top))
         t.start()
         tlist.append(t)
-        print("hi")
     except OSError:
         joinAll()
     print(room_name)
@@ -104,12 +105,6 @@ def joinAll():
 
 print(peers_list)
 
-def joinAll():
-    for t in tlist:
-        print("closing thread:", t)
-        t.join(timeout=5)
-
-
 def accept_connections(server, top):
     try:
         while e.isSet():
@@ -118,7 +113,6 @@ def accept_connections(server, top):
             message = connection.recv(1024).decode()
             
             if message == "___stop___":
-                print("stopping")
                 connection.close()
                 connection = None
                 break
@@ -144,14 +138,18 @@ def accept_connections(server, top):
 def handle_chat(chat, outputpanel):
     while e.isSet():
         try:
-            message_ar = chat.recv(1024).decode().split("___space___")            
+            message_ar = chat.recv(1024).decode().split("___space___")   
             if message_ar[0] == "___end___":
-                print("ending chat")
+                chat_connections.remove(chat)  
+                try:
+                    chat.send(("___end______space___" + gethostname()).encode())
+                except OSError:
+                    print("socket already closed")
+                    break
                 outputpanel.configure(state=NORMAL)
                 outputpanel.insert(END, message_ar[1] + " has left the chat", "left")
                 outputpanel.configure(state=DISABLED)
-                chat.send(("___end______space___" + gethostname()).encode())
-                chat_connections.remove(chat)
+               
                 break
             outputpanel.configure(state=NORMAL)
             outputpanel.insert(END, message_ar[0] + ": " + message_ar[1] + "\n", "left")
@@ -189,8 +187,9 @@ def handle_peer(codeshare, outputpanel, send=False):
         
             if command == "___end___":
                 peer_connections.remove(codeshare)
-                print("end command")
+                codeshare.settimeout(1)
                 codeshare.send("___end___".encode())
+                print("ending connection")                
                 break
 
             index = input_text[1]
@@ -246,9 +245,11 @@ def disconnect_peers():
     global chat_connections
     for conn in peer_connections:
         conn.send("___end___".encode())
-    
+        conn.close()
+
     for conn in chat_connections:
         conn.send(("___end______space___" + gethostname()).encode())
+        conn.close()
 
 def close_connections():
     global peer_connections
@@ -259,13 +260,18 @@ def close_connections():
 
 def handle_close():
     global root
+    global is_host
     e.clear()
-    root.destroy()
     close_connections()
-    stop_thread()
+    if is_host:
+        stop_server()
     joinAll()
+    root.destroy()
+    root = None
+    
+    
 
-def stop_thread():
+def stop_server():
     global client_port
     closing = socket(AF_INET,SOCK_STREAM)
     closing.connect(("", client_port))
