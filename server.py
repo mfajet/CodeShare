@@ -6,23 +6,44 @@ import traceback
 import errno
 from subprocess import Popen, PIPE, STDOUT
 import os
+import string
+import random
 ## global variables
 tList = []
-peers_list = []
 chat_rooms = []
 peer_base_port = 3000
+room_list_dict = {}
+choose_from = string.ascii_letters + "0123456789"
+peer_num = 0
+
+def unique_name():
+    str = ""
+    for x in range(6):
+        str += random.choice(choose_from)
+    return str
 
 def clientThread(connectionSocket, addr):
     peer = None
+    global peer_num
     try:
         print ("Thread Client Entering Now...")
         host, socket = addr
-
-        peer = host + "," + str(peer_base_port + len(peers_list))
-        peers_list.insert(0, peer)
-        to_send = " ".join(peers_list)
-        connectionSocket.send(to_send.encode())
-        print(peers_list)
+        room_name = connectionSocket.recv(1024).decode()
+        peer_num +=1
+        peer = host + "," + str(peer_base_port + peer_num)
+        if room_name == "NEW_ROOM"or not room_name in room_list_dict:
+            room_name = unique_name()
+            while room_name in room_list_dict:
+                room_name = unique_name()
+            room_list_dict[room_name] =[peer]
+            connectionSocket.send(("NEW_ROOM " + room_name + " " + peer).encode())
+        else:
+            peers_list = room_list_dict[room_name]
+            peers_list.insert(0, peer)
+            to_send = " ".join(peers_list)
+            connectionSocket.send(to_send.encode())
+            room_list_dict[room_name] = peers_list
+            print(peers_list)
         while True:
             f = open("tempFile",'w')
             # print("inside while loop")
@@ -50,15 +71,9 @@ def clientThread(connectionSocket, addr):
                 output = "Unexpected error\n".encode()
             connectionSocket.send(output)
 
-
-        peers_list.remove(peer)
-        print(peers_list)
-
     except OSError as e:
         # A socket error
           print("Socket error:",e)
-          peers_list.remove(peer)
-          print(peers_list)
 
 
 def joinAll():

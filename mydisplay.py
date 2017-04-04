@@ -33,12 +33,67 @@ chat_connections = []
 tlist = []
 clientSocket = socket(AF_INET,SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
-peers_list = clientSocket.recv(1024).decode().split()
-peer_info = peers_list[0]
-client_socket = int(peer_info.split(",")[1])
-peers_list.remove(peer_info)
+peers_list = []
+# peers_list = clientSocket.recv(1024).decode().split()
+# peer_info = peers_list[0]
+# client_socket = int(peer_info.split(",")[1])
+# peers_list.remove(peer_info)
 e = threading.Event()
 e.set()
+room_name = ""
+peer_info=""
+
+peer_server = socket(AF_INET,SOCK_STREAM)
+peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+
+def join_room(room, message, s,label):
+    global peers_list
+    global peer_info
+    global room_name
+    global client_socket
+    clientSocket.send(room.encode())
+    potential_list = clientSocket.recv(1024).decode().split()
+    if potential_list[0] == "NEW_ROOM":
+        peer_info = potential_list[2]
+        room_name = potential_list[1]
+        label.configure(text="Room: " + room_name)
+        peers_list = []
+    else:
+        label.configure(text="Room: " + room)
+        peers_list = potential_list
+        peer_info = peers_list[0]
+        client_socket = int(peer_info.split(",")[1])
+        peers_list.remove(peer_info)
+    client_socket = int(peer_info.split(",")[1])
+    connect_peers(s)
+    message.destroy()
+
+def create_room(message, top,label):
+    print("Room will be created")
+    global peers_list
+    global peer_info
+    global room_name
+    global client_socket
+
+    clientSocket.send("NEW_ROOM".encode())
+    reply = clientSocket.recv(1024).decode().split()
+    room_name = reply[1]
+    peers_list = []
+    peer_info = reply[2]
+    client_socket = int(peer_info.split(",")[1])
+
+    try:
+        peer_server.bind((serverName, client_socket))
+        peer_server.listen(1)
+        t = threading.Thread(target=accept_connections, args=(peer_server, top))
+        t.start()
+        tlist.append(t)
+        print("hi")
+    except OSError:
+        joinAll()
+    print(room_name)
+    label.configure(text="Room: " + room_name)
+    message.destroy()
 
 
 def joinAll():
@@ -46,13 +101,6 @@ def joinAll():
         print("closing thread:", t)
         t.join(timeout=1)
 
-try:
-    peer_server = socket(AF_INET,SOCK_STREAM)
-    peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    peer_server.bind((serverName, client_socket))
-    peer_server.listen(1)
-except OSError:
-    joinAll()
 
 print(peers_list)
 alive = True
@@ -232,9 +280,7 @@ def vp_start_gui():
     top = CodeSharer (root)
     display_support.init(root, top)
     root.protocol("WM_DELETE_WINDOW", handle_close)
-    t = threading.Thread(target=accept_connections, args=(peer_server, top))
-    t.start()
-    tlist.append(t)
+
 
     ######This code taken from https://mail.python.org/pipermail/tkinter-discuss/2015-August/003762.html
     try:
@@ -347,14 +393,6 @@ def load_file(code_textbox):
             showerror("Open Source File", "Failed to read file\n'%s'" % fname)
         return
 
-def join_room(room_name, message):
-    print(room_name)
-    message.destroy()
-
-def create_room(message):
-    print("Room will be created")
-    message.destroy()
-
 class CodeSharer:
     def __init__(self, top=None):
         """This class configures and populates the toplevel window.
@@ -385,12 +423,11 @@ class CodeSharer:
         self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
         self.Button1.configure(text="""Run""")
 
-
-        self.Button1 = Button(top)
-        self.Button1.place(relx=0.60, rely=0.02, height=26, width=120)
-        self.Button1.configure(activebackground="#d9d9d9")
-        self.Button1.configure(command=(lambda : connect_peers(self)))
-        self.Button1.configure(text="""Connect to peers""")
+        global room_name
+        self.RoomLabel = Label(top)
+        self.RoomLabel.place(relx=0.60, rely=0.02, height=26, width=120)
+        self.RoomLabel.configure(activebackground="#d9d9d9")
+        self.RoomLabel.configure(text="Room: " + room_name)
 
 
         self.Label2 = Label(top)
@@ -513,7 +550,7 @@ class CodeSharer:
         self.Button4.place(relx=0.47, rely=0.25, height=26, width=65)
         self.Button4.configure(activebackground="#d9d9d9")
         self.Button4.configure(text='''Join''')
-        self.Button4.configure(command=(lambda : join_room(self.Entry2.get(), self.Message1)))
+        self.Button4.configure(command=(lambda : join_room(self.Entry2.get(), self.Message1, self, self.RoomLabel)))
 
 
         self.Label5 = Label(self.Message1)
@@ -526,7 +563,7 @@ class CodeSharer:
         self.Button5.place(relx=0.47, rely=0.42, height=26, width=65)
         self.Button5.configure(activebackground="#d9d9d9")
         self.Button5.configure(text='''Create''')
-        self.Button5.configure(command=(lambda: create_room(self.Message1)))
+        self.Button5.configure(command=(lambda: create_room(self.Message1, self, self.RoomLabel)))
 
 
 
