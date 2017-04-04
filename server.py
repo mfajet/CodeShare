@@ -27,7 +27,7 @@ def clientThread(connectionSocket, addr):
             f = open("tempFile",'w')
             # print("inside while loop")
             msg = connectionSocket.recv(1024).decode()
-            if msg == "end":
+            if msg == "___end___":
                 break
             if msg[0:7] == "python3":
                 cmd = 'python3 tempFile'

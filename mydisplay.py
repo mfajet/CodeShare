@@ -49,55 +49,65 @@ except OSError:
     print("Socket Error")
 
 print(peers_list)
-alive = True
-
 
 def joinAll():
     for t in tlist:
         print("closing thread:", t)
-        t.join(timeout=15)
+        t.join(timeout=5)
 
 
 def accept_connections(server, top):
     try:
         while e.isSet():
             t = None
-            connectionSocket, addr = server.accept()
-            msg = connectionSocket.recv(1024).decode()
+            connection, addr = server.accept()
+            message = connection.recv(1024).decode()
             
-            if msg == "___stop___":
+            if message == "___stop___":
+                print("stopping")
+                connection.close()
+                connection = None
                 break
 
-            if msg == "___peer___":
-                t = threading.Thread(target=handle_peer, args=(connectionSocket, top.Scrolledtext1, True))
+            if message == "___peer___":
+                t = threading.Thread(target=handle_peer, args=(connection, top.Scrolledtext1, True))
                 top.Scrolledtext2.configure(state=NORMAL)
                 top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
-            elif msg == "___chat___":
-                chat_connections.append(connectionSocket)
-                t = threading.Thread(target=handle_chat, args=(connectionSocket, top.Scrolledtext3))
+                peer_connections.append(connection)
+            elif message == "___chat___":
+                chat_connections.append(connection)
+                t = threading.Thread(target=handle_chat, args=(connection, top.Scrolledtext3))
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
             t.start()
             tlist.append(t)
-            peer_connections.append(connectionSocket)
 
     except KeyboardInterrupt:
         joinAll()
 
-def handle_chat(connectionSocket, outputpanel):
+def handle_chat(chat, outputpanel):
     while e.isSet():
         try:
-            message_ar = connectionSocket.recv(1024).decode().split("___space___")
+            message_ar = chat.recv(1024).decode().split("___space___")            
+            if message_ar[0] == "___end___":
+                print("ending chat")
+                outputpanel.configure(state=NORMAL)
+                outputpanel.insert(END, message_ar[1] + " has left the chat", "left")
+                outputpanel.configure(state=DISABLED)
+                chat.send(("___end______space___" + gethostname()).encode())
+                chat_connections.remove(chat)
+                break
             outputpanel.configure(state=NORMAL)
             outputpanel.insert(END, message_ar[0] + ": " + message_ar[1] + "\n", "left")
             outputpanel.configure(state=DISABLED)
             outputpanel.see(END)
         except OSError as err:
             print("socket error", err)
+    chat.close()
 
-def handle_peer(connectionSocket, outputpanel, send=False):
+def handle_peer(codeshare, outputpanel, send=False):
 
     escaped_chars = {
         "13": "\n",
@@ -107,21 +117,26 @@ def handle_peer(connectionSocket, outputpanel, send=False):
 
     if send:
         current = outputpanel.get(1.0, END).strip() or "___null___"
-        connectionSocket.send(current.encode())
+        codeshare.send(current.encode())
     else:
-        code = connectionSocket.recv(1024).decode()
+        code = codeshare.recv(1024).decode()
         if code != "___null___":
             outputpanel.insert(1.0, code)
 
     while e.isSet():
         try:
-            input_text = connectionSocket.recv(1024).decode().split()
+            input_text = codeshare.recv(1024).decode().split()
+            
+            if not input_text:
+                break
+            
             command = input_text[0].lower()
             print(input_text)
-            if command == "___null___":
-                continue
-
-            if command == "end":
+        
+            if command == "___end___":
+                peer_connections.remove(codeshare)
+                print("end command")
+                codeshare.send("___end___".encode())
                 break
 
             index = input_text[1]
@@ -170,19 +185,38 @@ def handle_peer(connectionSocket, outputpanel, send=False):
 
         except OSError:
             break
-
+    codeshare.close()
 
 def disconnect_peers():
     global peer_connections
+    global chat_connections
     for conn in peer_connections:
-        conn.send("end".encode())
-        conn.close()
+        conn.send("___end___".encode())
+    
+    for conn in chat_connections:
+        conn.send(("___end______space___" + gethostname()).encode())
 
 def close_connections():
     global peer_connections
-    clientSocket.send("end".encode())
-    clientSocket.close()
     disconnect_peers()
+    clientSocket.send("___end___".encode())
+    clientSocket.close()
+    
+
+def handle_close():
+    global root
+    e.clear()
+    root.destroy()
+    close_connections()
+    stop_thread()
+    joinAll()
+
+def stop_thread():
+    global client_port
+    closing = socket(AF_INET,SOCK_STREAM)
+    closing.connect(("", client_port))
+    closing.send("___stop___".encode())
+    closing.close()
 
 already_connected = False
 def connect_peers(top):
@@ -250,22 +284,6 @@ def vp_start_gui():
 
 
     root.mainloop()
-
-
-def handle_close():
-    global root
-    e.clear()
-    root.destroy()
-    close_connections()
-    stop_thread()
-    joinAll()
-
-def stop_thread():
-    global client_port
-    closing = socket(AF_INET,SOCK_STREAM)
-    closing.connect(("", client_port))
-    closing.send("___stop___".encode())
-    closing.close()
 
 w = None
 def create_CodeSharer(root, *args, **kwargs):
