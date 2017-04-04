@@ -32,34 +32,38 @@ clientSocket = socket(AF_INET,SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
 peers_list = clientSocket.recv(1024).decode().split()
 peer_info = peers_list[0]
-client_socket = int(peer_info.split(",")[1])
+client_port = int(peer_info.split(",")[1])
 peers_list.remove(peer_info)
 e = threading.Event()
 e.set()
+
+try:
+    peer_server = socket(AF_INET,SOCK_STREAM)
+    peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+    peer_server.bind(("", client_port))
+    peer_server.listen(15)
+except OSError:
+    print("Socket Error")
+
+print(peers_list)
+alive = True
 
 
 def joinAll():
     for t in tlist:
         print("closing thread:", t)
-        t.join(timeout=1)
+        t.join(timeout=15)
 
-try:
-    peer_server = socket(AF_INET,SOCK_STREAM)
-    peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    peer_server.bind((serverName, client_socket))
-    peer_server.listen(1)
-except OSError:
-    joinAll()
-
-print(peers_list)
-alive = True
 
 def accept_connections(server, top):
     try:
         while e.isSet():
+            t = None
             connectionSocket, addr = server.accept()
-            # sends the current code to the peers
             msg = connectionSocket.recv(1024).decode()
+            
+            if msg == "___stop___":
+                break
 
             if msg == "___peer___":
                 t = threading.Thread(target=handle_peer, args=(connectionSocket, top.Scrolledtext1, True))
@@ -160,7 +164,7 @@ def handle_peer(connectionSocket, outputpanel, send=False):
                     outputpanel.insert(index, text)
 
                 except IndexError:
-                    print("not a char")
+                    print("not a character")
 
         except OSError:
             break
@@ -170,13 +174,11 @@ def disconnect_peers():
     global peer_connections
     for conn in peer_connections:
         conn.send("end".encode())
-        # conn.shutdown(SHUT_RD)
         conn.close()
 
 def close_connections():
     global peer_connections
     clientSocket.send("end".encode())
-    # clientSocket.shutdown(SHUT_RD)
     clientSocket.close()
     disconnect_peers()
 
@@ -253,7 +255,15 @@ def handle_close():
     e.clear()
     root.destroy()
     close_connections()
+    stop_thread()
     joinAll()
+
+def stop_thread():
+    global client_port
+    closing = socket(AF_INET,SOCK_STREAM)
+    closing.connect(("", client_port))
+    closing.send("___stop___".encode())
+    closing.close()
 
 w = None
 def create_CodeSharer(root, *args, **kwargs):
@@ -320,7 +330,7 @@ def send_message(entry, box):
     if message and not message == None:
         broadcast(message)
         box.configure(state=NORMAL)
-        box.insert(END, message + " - me\n", "right")
+        box.insert(END, message + ": me\n", "right")
         box.configure(state=DISABLED)
         entry.delete(0,END)
         box.see(END)
