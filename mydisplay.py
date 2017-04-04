@@ -400,7 +400,7 @@ def handle_keyboard(event):
         char = chr(int(input_text))
         if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
             syntax_highlight(display_support.combobox,event.widget)
-    except e:
+    except:
         pass
 
     if start and end:
@@ -541,15 +541,22 @@ class CodeSharer:
         # self.Scrolledtext1.tag_configure("Token.Comment.Multi", foreground="#3d3d3d")
         # self.Scrolledtext1.tag_configure("Token.Comment.Single", foreground="#3d3d3d")
         # self.Scrolledtext1.tag_configure("Token.Literal.String", foreground="#248F24")
+
+        # The following is the list of styles that can be used
+        #TODO: Make style selectable?
+        #['manni', 'igor', 'lovelace', 'xcode', 'vim', 'autumn', 'abap', 'vs', 'rrt',
+        #'native', 'perldoc', 'borland', 'arduino', 'tango', 'emacs', 'friendly',
+        #'monokai', 'paraiso-dark', 'colorful', 'murphy', 'bw', 'pastie', 'rainbow_dash',
+        #'algol_nu', 'paraiso-light', 'trac', 'default', 'algol', 'fruity']
+
         style = get_style_by_name('default')
 
         for token, predefined in style:
             if predefined['color']:
-                foreground = "#%s" % predefined['color']
+                color = "#" + predefined['color']
             else:
-                foreground = None
-
-            self.Scrolledtext1.tag_configure(str(token), foreground=foreground)
+                color = None
+            self.Scrolledtext1.tag_configure(str(token), foreground=color)
 
 
         self.TCombobox1 = ttk.Combobox(top)
