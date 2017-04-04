@@ -70,12 +70,11 @@ def accept_connections(server, top):
                 top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
             elif msg == "___chat___":
+                chat_connections.append(connectionSocket)
                 t = threading.Thread(target=handle_chat, args=(connectionSocket, top.Scrolledtext3))
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
-
-
             t.start()
             tlist.append(t)
             peer_connections.append(connectionSocket)
@@ -84,7 +83,15 @@ def accept_connections(server, top):
         joinAll()
 
 def handle_chat(connectionSocket, outputpanel):
-    print("chat")
+    while e.isSet():
+        try:
+            message_ar = connectionSocket.recv(1024).decode().split("___space___")
+            outputpanel.configure(state=NORMAL)
+            outputpanel.insert(END, message_ar[0] + ": " + message_ar[1] + "\n", "left")
+            outputpanel.configure(state=DISABLED)
+            outputpanel.see(END)
+        except OSError as err:
+            print("socket error", err)
 
 def handle_peer(connectionSocket, outputpanel, send=False):
 
@@ -165,13 +172,13 @@ def disconnect_peers():
     global peer_connections
     for conn in peer_connections:
         conn.send("end".encode())
-        conn.shutdown(SHUT_RD)
+        # conn.shutdown(SHUT_RD)
         conn.close()
 
 def close_connections():
     global peer_connections
     clientSocket.send("end".encode())
-    clientSocket.shutdown(SHUT_RD)
+    # clientSocket.shutdown(SHUT_RD)
     clientSocket.close()
     disconnect_peers()
 
@@ -203,12 +210,12 @@ def connect_peers(top):
                 chat_socket.connect((server,socket_number))
                 chat_socket.send("___chat___".encode())
 
-                t = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
-                t.start()
-                tlist.append(t)
+                t1 = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
+                t1.start()
+                tlist.append(t1)
 
                 top.Scrolledtext3.configure(state=NORMAL)
-                top.Scrolledtext3.insert(END, "Connected to chat: " + server + "\n", "right")
+                top.Scrolledtext3.insert(END, "Connected to peer: " + server + "\n", "right")
                 top.Scrolledtext3.configure(state=DISABLED)
 
                 peer_connections.append(peer_socket)
@@ -260,9 +267,6 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def handle_tab(event):
-    print("tab Event")
-
 def hande_keyboard(event):
     start = None
     end = None
@@ -285,12 +289,18 @@ def hande_keyboard(event):
     else:
         to_send = event.keysym + " " + index + " " + input_text
 
-    send_update(to_send)
+    broadcast_code(to_send)
     return
 
-def send_update(to_send):
+def broadcast_code(to_send):
     for conn in peer_connections:
         conn.send(to_send.encode())
+
+def broadcast(to_send):
+    for conn in chat_connections:
+        # TODO: change hostname by username
+        message = gethostname() + "___space___" + to_send
+        conn.send(message.encode())
 
 def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
@@ -309,7 +319,8 @@ def run_code(input, outputLabel, language):
 
 def send_message(entry, box):
     message = entry.get()
-    if not message == "" and not message == None:
+    if message and not message == None:
+        broadcast(message)
         box.configure(state=NORMAL)
         box.insert(END, message + " - me\n", "right")
         box.configure(state=DISABLED)
@@ -336,11 +347,13 @@ def load_file(code_textbox):
             showerror("Open Source File", "Failed to read file\n'%s'" % fname)
         return
 
-def join_room(room_name):
+def join_room(room_name, message):
     print(room_name)
+    message.destroy()
 
-def create_room():
+def create_room(message):
     print("Room will be created")
+    message.destroy()
 
 class CodeSharer:
     def __init__(self, top=None):
@@ -479,41 +492,41 @@ class CodeSharer:
         self.Message1.configure(text='''Join a coding room''')
         self.Message1.configure(width=773)
 
-        self.Label6 = Label(top)
+        self.Label6 = Label(self.Message1)
         self.Label6.place(relx=0.37, rely=0.20, height=28, width=50)
         self.Label6.configure(activebackground="#f9f9f9")
         self.Label6.configure(text='''Room #''')
 
-        self.Label4 = Label(top)
+        self.Label4 = Label(self.Message1)
         self.Label4.place(relx=0.38, rely=0.15, height=28, width=206)
         self.Label4.configure(activebackground="#f9f9f9")
         self.Label4.configure(font=font11)
         self.Label4.configure(text='''Join an existing room''')
 
-        self.Entry2 = Entry(top)
+        self.Entry2 = Entry(self.Message1)
         self.Entry2.place(relx=0.42, rely=0.20, relheight=0.05, relwidth=0.25)
         self.Entry2.configure(background="white")
         self.Entry2.configure(font="TkFixedFont")
         self.Entry2.configure(width=306)
 
-        self.Button4 = Button(top)
+        self.Button4 = Button(self.Message1)
         self.Button4.place(relx=0.47, rely=0.25, height=26, width=65)
         self.Button4.configure(activebackground="#d9d9d9")
         self.Button4.configure(text='''Join''')
-        self.Button4.configure(command=(lambda : join_room(self.Entry2.get())))
+        self.Button4.configure(command=(lambda : join_room(self.Entry2.get(), self.Message1)))
 
 
-        self.Label5 = Label(top)
+        self.Label5 = Label(self.Message1)
         self.Label5.place(relx=0.38, rely=0.33, height=28, width=206)
         self.Label5.configure(activebackground="#f9f9f9")
         self.Label5.configure(font=font11)
         self.Label5.configure(text='''Create a new room''')
 
-        self.Button5 = Button(top)
+        self.Button5 = Button(self.Message1)
         self.Button5.place(relx=0.47, rely=0.42, height=26, width=65)
         self.Button5.configure(activebackground="#d9d9d9")
         self.Button5.configure(text='''Create''')
-        self.Button5.configure(command=create_room)
+        self.Button5.configure(command=(lambda: create_room(self.Message1)))
 
 
 
