@@ -56,10 +56,12 @@ def join_room(room, message, s,label):
     if potential_list[0] == "NEW_ROOM":
         peer_info = potential_list[2]
         room_name = potential_list[1]
-        label.configure(text="Room: " + room_name)
+        label.insert(END, room_name)
+        label.configure(relief=FLAT,  state='readonly')
         peers_list = []
     else:
-        label.configure(text="Room: " + room)
+        label.insert(END, room_name)
+        label.configure(relief=FLAT,  state='readonly')
         peers_list = potential_list
         peer_info = peers_list[0]
         client_socket = int(peer_info.split(",")[1])
@@ -92,7 +94,9 @@ def create_room(message, top,label):
     except OSError:
         joinAll()
     print(room_name)
-    label.configure(text="Room: " + room_name)
+    label.insert(END, room_name)
+    label.configure(relief=FLAT,  state='readonly')
+
     message.destroy()
 
 
@@ -424,10 +428,10 @@ class CodeSharer:
         self.Button1.configure(text="""Run""")
 
         global room_name
-        self.RoomLabel = Label(top)
+        self.RoomLabel = Entry(top)
+        self.RoomLabel.configure(background="#d9d9d9", bd=0, highlightthickness=0)
         self.RoomLabel.place(relx=0.60, rely=0.02, height=26, width=120)
-        self.RoomLabel.configure(activebackground="#d9d9d9")
-        self.RoomLabel.configure(text="Room: " + room_name)
+        self.RoomLabel.insert(END, "Room: " )
 
 
         self.Label2 = Label(top)
