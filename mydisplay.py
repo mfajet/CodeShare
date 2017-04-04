@@ -67,11 +67,11 @@ def accept_connections(server, top):
                 top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
             elif msg == "___chat___":
+                chat_connections.append(connectionSocket)                
                 t = threading.Thread(target=handle_chat, args=(connectionSocket, top.Scrolledtext3))
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
-            
             
             t.start()
             tlist.append(t)
@@ -81,7 +81,15 @@ def accept_connections(server, top):
         joinAll()
 
 def handle_chat(connectionSocket, outputpanel):
-    print("chat")
+    while e.isSet():
+        try:
+            message_ar = connectionSocket.recv(1024).decode().split("___space___")
+            outputpanel.configure(state=NORMAL)
+            outputpanel.insert(END, message_ar[0] + ": " + message_ar[1] + "\n", "left")
+            outputpanel.configure(state=DISABLED)
+            outputpanel.see(END)
+        except OSError as err:
+            print("socket error", err)
 
 def handle_peer(connectionSocket, outputpanel, send=False):
     
@@ -162,13 +170,13 @@ def disconnect_peers():
     global peer_connections
     for conn in peer_connections:
         conn.send("end".encode())
-        conn.shutdown(SHUT_RD)
+        # conn.shutdown(SHUT_RD)
         conn.close()
 
 def close_connections():
     global peer_connections
     clientSocket.send("end".encode())
-    clientSocket.shutdown(SHUT_RD)
+    # clientSocket.shutdown(SHUT_RD)
     clientSocket.close()
     disconnect_peers()
 
@@ -200,12 +208,12 @@ def connect_peers(top):
                 chat_socket.connect((server,socket_number))
                 chat_socket.send("___chat___".encode())
                 
-                t = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
-                t.start()
-                tlist.append(t)
+                t1 = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
+                t1.start()
+                tlist.append(t1)
                 
                 top.Scrolledtext3.configure(state=NORMAL)
-                top.Scrolledtext3.insert(END, "Connected to chat: " + server + "\n", "right")
+                top.Scrolledtext3.insert(END, "Connected to peer: " + server + "\n", "right")
                 top.Scrolledtext3.configure(state=DISABLED)
                 
                 peer_connections.append(peer_socket)
@@ -257,9 +265,6 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def handle_tab(event):
-    print("tab Event")
-
 def hande_keyboard(event):
     start = None
     end = None
@@ -282,12 +287,18 @@ def hande_keyboard(event):
     else:
         to_send = event.keysym + " " + index + " " + input_text
 
-    send_update(to_send)
+    broadcast_code(to_send)
     return
 
-def send_update(to_send):
+def broadcast_code(to_send):
     for conn in peer_connections:
         conn.send(to_send.encode())
+
+def broadcast(to_send):
+    for conn in chat_connections:
+        # TODO: change hostname by username
+        message = gethostname() + "___space___" + to_send
+        conn.send(message.encode())
 
 def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
@@ -306,7 +317,8 @@ def run_code(input, outputLabel, language):
 
 def send_message(entry, box):
     message = entry.get()
-    if not message == "" and not message == None:
+    if message and not message == None:
+        broadcast(message)
         box.configure(state=NORMAL)
         box.insert(END, message + " - me\n", "right")
         box.configure(state=DISABLED)
