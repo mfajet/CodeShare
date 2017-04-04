@@ -12,12 +12,15 @@ except ImportError:
 
 try:
     import ttk
-    import TKFileDialog
+    import TKFileDialog as FileDialog
+    import tkMessageBox as messagebox
     py3 = 0
 except ImportError:
     import tkinter.ttk as ttk
     import tkinter.font as tkfont
     import tkinter.filedialog as FileDialog
+    from tkinter import messagebox
+
     py3 = 1
 
 import mydisplay_support as display_support
@@ -302,6 +305,10 @@ class CodeSharer:
         _compcolor = "#d9d9d9" # X11 color: "gray85"
         _ana1color = "#d9d9d9" # X11 color: "gray85"
         _ana2color = "#d9d9d9" # X11 color: "gray85"
+        font11 = "-family {Bitstream Vera Sans} -size 14 -weight "  \
+            "normal -slant roman -underline 0 -overstrike 0"
+        font9 = "-family {Bitstream Vera Sans} -size 21 -weight normal"  \
+            " -slant roman -underline 0 -overstrike 0"
         self.style = ttk.Style()
         if sys.platform == "win32":
             self.style.theme_use("winnative")
@@ -417,6 +424,50 @@ class CodeSharer:
         self.Button3.configure(activebackground="#d9d9d9")
         self.Button3.configure(text='''Open''')
         self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1)))
+
+        self.Message1 = Message(top)
+        self.Message1.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
+        self.Message1.configure(anchor=N)
+        self.Message1.configure(font=font9)
+        self.Message1.configure(pady="10")
+        self.Message1.configure(text='''Join a coding room''')
+        self.Message1.configure(width=773)
+
+        self.Label6 = Label(top)
+        self.Label6.place(relx=0.37, rely=0.20, height=28, width=50)
+        self.Label6.configure(activebackground="#f9f9f9")
+        self.Label6.configure(text='''Room #''')
+
+        self.Label4 = Label(top)
+        self.Label4.place(relx=0.38, rely=0.15, height=28, width=206)
+        self.Label4.configure(activebackground="#f9f9f9")
+        self.Label4.configure(font=font11)
+        self.Label4.configure(text='''Join an existing room''')
+
+        self.Entry2 = Entry(top)
+        self.Entry2.place(relx=0.42, rely=0.20, relheight=0.05, relwidth=0.25)
+        self.Entry2.configure(background="white")
+        self.Entry2.configure(font="TkFixedFont")
+        self.Entry2.configure(width=306)
+
+        self.Button4 = Button(top)
+        self.Button4.place(relx=0.47, rely=0.25, height=26, width=65)
+        self.Button4.configure(activebackground="#d9d9d9")
+        self.Button4.configure(text='''Join''')
+
+
+        self.Label5 = Label(top)
+        self.Label5.place(relx=0.38, rely=0.33, height=28, width=206)
+        self.Label5.configure(activebackground="#f9f9f9")
+        self.Label5.configure(font=font11)
+        self.Label5.configure(text='''Create a new room''')
+
+        self.Button5 = Button(top)
+        self.Button5.place(relx=0.47, rely=0.42, height=26, width=65)
+        self.Button5.configure(activebackground="#d9d9d9")
+        self.Button5.configure(text='''Create''')
+
+
 
 
 # The following code is added to facilitate the Scrolled widgets you specified.
