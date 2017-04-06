@@ -554,11 +554,11 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.configure(padx="30")
+        self.Scrolledtext1.configure(padx="30",pady="1.5")
         self.LineNum = TextLineNumbers(self.Scrolledtext1)
         self.LineNum.attach(self.Scrolledtext1)
         self.LineNum.redraw()
-        self.LineNum.place(x=-30, y=0, relheight=1, width=30)
+        self.LineNum.place(x=-30, y=-1.5, relheight=1.1, width=30)
         self.Scrolledtext1.bind("<Key>", lambda e: handle_keyboard(e,self.LineNum))
         self.Scrolledtext1.bind("<MouseWheel>",self.LineNum.redraw)
         self.Scrolledtext1.bind("<Button-4>", self.LineNum.redraw)
@@ -786,7 +786,6 @@ class AutoScroll(object):
         return str(self.master)
 
 def autoscrollLine(sbar,LineNum, first, last):
-    print("yes")
     LineNum.redraw()
     """Hide and show scrollbar as needed."""
     first, last = float(first), float(last)
