@@ -154,7 +154,7 @@ def accept_connections(server, top):
                 break
 
             if message == "___peer___":
-                t = threading.Thread(target=handle_peer, args=(connection, top.Scrolledtext1, True))
+                t = threading.Thread(target=handle_peer, args=(connection, top.Scrolledtext1, top.LineNum, True))
                 top.Scrolledtext2.configure(state=NORMAL)
                 top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
@@ -195,7 +195,7 @@ def handle_chat(chat, outputpanel):
             print("socket error", err)
     chat.close()
 
-def handle_peer(codeshare, outputpanel, send=False):
+def handle_peer(codeshare, outputpanel, LineNum, send=False):
 
     escaped_chars = {
         "13": "\n",
@@ -208,6 +208,7 @@ def handle_peer(codeshare, outputpanel, send=False):
         codeshare.send(current.encode())
     else:
         code = codeshare.recv(1024).decode()
+        print(code)
         if code != "___null___":
             outputpanel.insert(1.0, code)
 
@@ -229,7 +230,7 @@ def handle_peer(codeshare, outputpanel, send=False):
                 break
 
             index = input_text[1]
-
+            LineNum.redraw()
             if command == "backspace":
                 index_ar = index.split(".")
                 line_index = int(index_ar[0])
@@ -335,7 +336,7 @@ def connect_peers(top):
                 top.Scrolledtext2.insert(END, "Connected to peer: " + server + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
 
-                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
+                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum))
 
                 t.start()
                 tlist.append(t)
@@ -589,8 +590,7 @@ class CodeSharer:
         self.LineNum = TextLineNumbers(self.Scrolledtext1)
         self.LineNum.attach(self.Scrolledtext1)
         self.LineNum.redraw()
-        self.LineNum.place(x=-20, y=-1, relheight=1
-                , width=20)
+        self.LineNum.place(x=-20, y=-1, relheight=1, width=20)
 
         self.TCombobox1 = ttk.Combobox(top)
         self.TCombobox1.place(relx=0.34, rely=0.02, relheight=0.03
