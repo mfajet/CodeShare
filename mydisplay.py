@@ -554,8 +554,15 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.configure(padx="20")
+        self.Scrolledtext1.configure(padx="30")
+        self.LineNum = TextLineNumbers(self.Scrolledtext1)
+        self.LineNum.attach(self.Scrolledtext1)
+        self.LineNum.redraw()
+        self.LineNum.place(x=-30, y=0, relheight=1, width=30)
         self.Scrolledtext1.bind("<Key>", lambda e: handle_keyboard(e,self.LineNum))
+        self.Scrolledtext1.bind("<MouseWheel>",self.LineNum.redraw)
+        self.Scrolledtext1.bind("<Button-4>", self.LineNum.redraw)
+        self.Scrolledtext1.bind("<Button-5>", self.LineNum.redraw)
         #self.Scrolledtext1.bind("<KeyRelease>",lambda e: syntax_highlight(display_support.combobox,self.Scrolledtext1))
         # self.Scrolledtext1.tag_configure("Token.Keyword", foreground="#660029")
         # self.Scrolledtext1.tag_configure("Token.Keyword.Constant", foreground="#660029")
@@ -587,10 +594,7 @@ class CodeSharer:
             else:
                 color = None
             self.Scrolledtext1.tag_configure(str(token), foreground=color)
-        self.LineNum = TextLineNumbers(self.Scrolledtext1)
-        self.LineNum.attach(self.Scrolledtext1)
-        self.LineNum.redraw()
-        self.LineNum.place(x=-20, y=-1, relheight=1, width=20)
+
 
         self.TCombobox1 = ttk.Combobox(top)
         self.TCombobox1.place(relx=0.34, rely=0.02, relheight=0.03
@@ -806,6 +810,7 @@ class TextLineNumbers(Canvas):
 
     def redraw(self, *args):
         '''redraw line numbers'''
+        print("redrawing")
         self.delete("all")
         i = self.textwidget.index("@0,0")
         while True :
