@@ -391,7 +391,8 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def handle_keyboard(event):
+def handle_keyboard(event, LineNum):
+    LineNum.redraw()
     start = None
     end = None
     input_text = ""
@@ -552,7 +553,8 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.bind("<Key>", handle_keyboard)
+        self.Scrolledtext1.configure(padx="20")
+        self.Scrolledtext1.bind("<Key>", lambda e: handle_keyboard(e,self.LineNum))
         #self.Scrolledtext1.bind("<KeyRelease>",lambda e: syntax_highlight(display_support.combobox,self.Scrolledtext1))
         # self.Scrolledtext1.tag_configure("Token.Keyword", foreground="#660029")
         # self.Scrolledtext1.tag_configure("Token.Keyword.Constant", foreground="#660029")
@@ -584,7 +586,11 @@ class CodeSharer:
             else:
                 color = None
             self.Scrolledtext1.tag_configure(str(token), foreground=color)
-
+        self.LineNum = TextLineNumbers(self.Scrolledtext1)
+        self.LineNum.attach(self.Scrolledtext1)
+        self.LineNum.redraw()
+        self.LineNum.place(x=-20, y=-1, relheight=1
+                , width=20)
 
         self.TCombobox1 = ttk.Combobox(top)
         self.TCombobox1.place(relx=0.34, rely=0.02, relheight=0.03
@@ -787,6 +793,28 @@ class ScrolledText(AutoScroll, Text):
     def __init__(self, master, **kw):
         Text.__init__(self, master, **kw)
         AutoScroll.__init__(self, master)
+
+
+######Taken from http://stackoverflow.com/a/16375233
+class TextLineNumbers(Canvas):
+    def __init__(self, *args, **kwargs):
+        Canvas.__init__(self, *args, **kwargs)
+        self.textwidget = None
+
+    def attach(self, text_widget):
+        self.textwidget = text_widget
+
+    def redraw(self, *args):
+        '''redraw line numbers'''
+        self.delete("all")
+        i = self.textwidget.index("@0,0")
+        while True :
+            dline= self.textwidget.dlineinfo(i)
+            if dline is None: break
+            y = dline[1]
+            linenum = str(i).split(".")[0]
+            self.create_text(2,y,anchor="nw",font=self.textwidget['font'], text=linenum)
+            i = self.textwidget.index("%s+1line" % i)
 
 if __name__ == "__main__":
     vp_start_gui()
