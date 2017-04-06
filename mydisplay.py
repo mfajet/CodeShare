@@ -92,6 +92,15 @@ def join_room(room, message, s,label):
         peers_list.remove(peer_info)
     client_port = int(peer_info.split(",")[1])
     connect_peers(s)
+    try:
+        peer_server.bind((serverName, client_port))
+        peer_server.listen(1)
+        is_host = True
+        t = threading.Thread(target=accept_connections, args=(peer_server, s))
+        t.start()
+        tlist.append(t)
+    except OSError:
+        joinAll()
     message.destroy()
 
 def create_room(message, top,label):
@@ -466,6 +475,24 @@ def load_file(code_textbox):
             showerror("Open Source File", "Failed to read file\n'%s'" % fname)
         return
 
+def change_style(name, lang, box):
+    print("Name" + name)
+    for tag in box.tag_names():
+        box.tag_delete(tag)
+    try:
+        style = get_style_by_name(name)
+    except:
+        style = get_style_by_name('default')
+
+
+    for token, predefined in style:
+        if predefined['color']:
+            color = "#" + predefined['color']
+        else:
+            color = None
+        box.tag_configure(str(token), foreground=color)
+    syntax_highlight(lang,box)
+
 class CodeSharer:
     def __init__(self, top=None):
         """This class configures and populates the toplevel window.
@@ -491,7 +518,7 @@ class CodeSharer:
         top.title("CodeSharer")
 
         self.Button1 = Button(top)
-        self.Button1.place(relx=0.48, rely=0.02, height=26, width=50)
+        self.Button1.place(relx=0.79, rely=0.01, height=26, width=50)
         self.Button1.configure(activebackground="#d9d9d9")
         self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
         self.Button1.configure(text="""Run""")
@@ -560,7 +587,7 @@ class CodeSharer:
 
 
         self.TCombobox1 = ttk.Combobox(top)
-        self.TCombobox1.place(relx=0.19, rely=0.02, relheight=0.03
+        self.TCombobox1.place(relx=0.34, rely=0.02, relheight=0.03
                 , relwidth=0.23)
         self.value_list = ["python2","python3","Haskell"]
         self.TCombobox1.configure(values=self.value_list)
@@ -573,6 +600,18 @@ class CodeSharer:
 
         self.TCombobox1.bind("<<ComboboxSelected>>", langselection)
 
+        self.TCombobox2 = ttk.Combobox(top)
+        self.TCombobox2.place(relx=0.10, rely=0.02, relheight=0.03
+                , relwidth=0.23)
+        self.TCombobox2.configure(values=['manni', 'igor', 'lovelace', 'xcode', 'vim', 'autumn', 'abap', 'vs', 'rrt',
+        'native', 'perldoc', 'borland', 'arduino', 'tango', 'emacs', 'friendly',
+        'monokai', 'paraiso-dark', 'colorful', 'murphy', 'bw', 'pastie', 'rainbow_dash',
+        'algol_nu', 'paraiso-light', 'trac', 'default', 'algol', 'fruity'])
+        self.TCombobox2.configure(textvariable=style)
+        self.TCombobox2.configure(takefocus="")
+        self.TCombobox2.current(26)
+
+        self.TCombobox2.bind("<<ComboboxSelected>>", lambda e : change_style(self.TCombobox2.get(),display_support.combobox, self.Scrolledtext1))
 
         self.Scrolledtext2 = ScrolledText(top)
         self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.52

@@ -18,13 +18,9 @@ set vTcl(active_menu_fg) #000000
 # vTcl Code to Load User Fonts
 
 vTcl:font:add_font \
-    "-family {Bitstream Vera Sans} -size 21 -weight normal -slant roman -underline 0 -overstrike 0" \
-    user \
-    vTcl:font10
-vTcl:font:add_font \
     "-family {Bitstream Vera Sans} -size 14 -weight normal -slant roman -underline 0 -overstrike 0" \
     user \
-    vTcl:font9
+    vTcl:font10
 #################################
 #LIBRARY PROCEDURES
 #
@@ -166,36 +162,9 @@ proc vTclWindow.top37 {base} {
         -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
         -text {Chat with peers} 
     vTcl:DefineAlias "$top.lab40" "Label1" vTcl:WidgetProc "Toplevel1" 1
-    message $top.mes39 \
-        -anchor n -background {#d9d9d9} \
-        -font $::vTcl(fonts,vTcl:font10,object) -foreground {#000000} \
-        -highlightcolor black -pady 10 -text {Join a coding room} -width 773 
-    vTcl:DefineAlias "$top.mes39" "Message1" vTcl:WidgetProc "Toplevel1" 1
-    entry $top.mes39.ent41 \
-        -background white -font TkFixedFont -foreground {#000000} \
-        -highlightcolor black -insertbackground black \
-        -selectbackground {#c4c4c4} -selectforeground black \
-        -textvariable entry2 
-    vTcl:DefineAlias "$top.mes39.ent41" "Entry2" vTcl:WidgetProc "Toplevel1" 1
-    label $top.mes39.lab42 \
-        -activebackground {#f9f9f9} -activeforeground black \
-        -background {#d9d9d9} -font $::vTcl(fonts,vTcl:font9,object) \
-        -foreground {#000000} -highlightcolor black \
-        -text {Join an existing room} 
-    vTcl:DefineAlias "$top.mes39.lab42" "Label3" vTcl:WidgetProc "Toplevel1" 1
-    label $top.mes39.lab43 \
-        -activebackground {#f9f9f9} -activeforeground black \
-        -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
-        -text {Room: } 
-    vTcl:DefineAlias "$top.mes39.lab43" "Label4" vTcl:WidgetProc "Toplevel1" 1
-    button $top.mes39.but45 \
-        -activebackground {#d9d9d9} -activeforeground black \
-        -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
-        -text Create 
-    vTcl:DefineAlias "$top.mes39.but45" "Button3" vTcl:WidgetProc "Toplevel1" 1
     label $top.cpd44 \
         -activebackground {#f9f9f9} -activeforeground black \
-        -background {#d9d9d9} -font $::vTcl(fonts,vTcl:font9,object) \
+        -background {#d9d9d9} -font $::vTcl(fonts,vTcl:font10,object) \
         -foreground {#000000} -highlightcolor black -text {Create a new room} 
     vTcl:DefineAlias "$top.cpd44" "Label5" vTcl:WidgetProc "Toplevel1" 1
     button $top.cpd46 \
@@ -203,11 +172,14 @@ proc vTclWindow.top37 {base} {
         -background {#d9d9d9} -foreground {#000000} -highlightcolor black \
         -text Join 
     vTcl:DefineAlias "$top.cpd46" "Button4" vTcl:WidgetProc "Toplevel1" 1
+    ttk::combobox $top.tCo37 \
+        -textvariable combobox -foreground {} -background {} -takefocus {} 
+    vTcl:DefineAlias "$top.tCo37" "TCombobox2" vTcl:WidgetProc "Toplevel1" 1
     ###################
     # SETTING GEOMETRY
     ###################
     place $top.but40 \
-        -in $top -x 340 -y 10 -width 50 -height 26 -anchor nw \
+        -in $top -x 610 -y 8 -width 50 -height 26 -anchor nw \
         -bordermode ignore 
     place $top.lab41 \
         -in $top -x 0 -y 510 -width 766 -relwidth 0 -height 28 -relheight 0 \
@@ -216,7 +188,7 @@ proc vTclWindow.top37 {base} {
         -in $top -x 0 -y 40 -width 398 -relwidth 0 -height 468 -relheight 0 \
         -anchor nw -bordermode ignore 
     place $top.tCo40 \
-        -in $top -x 150 -y 10 -anchor nw -bordermode ignore 
+        -in $top -x 410 -y 10 -anchor nw -bordermode ignore 
     place $top.scr38 \
         -in $top -x 400 -y 38 -width 368 -relwidth 0 -height 278 -relheight 0 \
         -anchor nw -bordermode ignore 
@@ -232,25 +204,15 @@ proc vTclWindow.top37 {base} {
     place $top.lab40 \
         -in $top -x 404 -y 320 -width 99 -height 18 -anchor nw \
         -bordermode ignore 
-    place $top.mes39 \
-        -in $top -x 0 -y 10 -width 773 -relwidth 0 -height 510 -relheight 0 \
-        -anchor nw -bordermode ignore 
-    place $top.mes39.ent41 \
-        -in $top.mes39 -x 340 -y 90 -width 146 -height 20 -anchor nw \
-        -bordermode ignore 
-    place $top.mes39.lab42 \
-        -in $top.mes39 -x 290 -y 60 -width 206 -relwidth 0 -height 28 \
-        -relheight 0 -anchor nw -bordermode ignore 
-    place $top.mes39.lab43 \
-        -in $top.mes39 -x 290 -y 90 -anchor nw -bordermode ignore 
-    place $top.mes39.but45 \
-        -in $top.mes39 -x 360 -y 200 -anchor nw -bordermode ignore 
     place $top.cpd44 \
         -in $top -x 290 -y 180 -width 206 -height 28 -anchor nw \
         -bordermode ignore 
     place $top.cpd46 \
         -in $top -x 360 -y 130 -width 65 -height 26 -anchor nw \
         -bordermode inside 
+    place $top.tCo37 \
+        -in $top -x 202 -y 10 -width 177 -height 18 -anchor nw \
+        -bordermode ignore 
 
     vTcl:FireEvent $base <<Ready>>
 }
