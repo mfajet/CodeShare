@@ -585,7 +585,11 @@ class CodeSharer:
         #'native', 'perldoc', 'borland', 'arduino', 'tango', 'emacs', 'friendly',
         #'monokai', 'paraiso-dark', 'colorful', 'murphy', 'bw', 'pastie', 'rainbow_dash',
         #'algol_nu', 'paraiso-light', 'trac', 'default', 'algol', 'fruity']
-
+        try:
+            self.Scrolledtext1.configure(yscrollcommand=(lambda fir,las: autoscrollLine(self.Scrolledtext1.vsb, self.LineNum,fir,las)))
+        except Exception as e:
+            print (e)
+            pass
         style = get_style_by_name('default')
 
         for token, predefined in style:
@@ -731,7 +735,7 @@ class AutoScroll(object):
         #  could be used for scrolled entry widget for which vertical
         #  scrolling is not supported. 5/7/14.
         try:
-            vsb = ttk.Scrollbar(master, orient="vertical", command=self.yview)
+            self.vsb = ttk.Scrollbar(master, orient="vertical", command=self.yview)
         except:
             pass
         hsb = ttk.Scrollbar(master, orient="horizontal", command=self.xview)
@@ -739,14 +743,14 @@ class AutoScroll(object):
         #self.configure(yscrollcommand=_autoscroll(vsb),
         #    xscrollcommand=_autoscroll(hsb))
         try:
-            self.configure(yscrollcommand=self._autoscroll(vsb))
+            self.configure(yscrollcommand=self._autoscroll(self.vsb))
         except:
             pass
         self.configure(xscrollcommand=self._autoscroll(hsb))
 
         self.grid(column=0, row=0, sticky="nsew")
         try:
-            vsb.grid(column=1, row=0, sticky="ns")
+            self.vsb.grid(column=1, row=0, sticky="ns")
         except:
             pass
         hsb.grid(column=0, row=1, sticky="ew")
@@ -780,6 +784,17 @@ class AutoScroll(object):
 
     def __str__(self):
         return str(self.master)
+
+def autoscrollLine(sbar,LineNum, first, last):
+    print("yes")
+    LineNum.redraw()
+    """Hide and show scrollbar as needed."""
+    first, last = float(first), float(last)
+    if first <= 0 and last >= 1:
+        sbar.grid_remove()
+    else:
+        sbar.grid()
+    sbar.set(first, last)
 
 def _create_container(func):
     """Creates a ttk Frame with a given master, and use this new frame to
