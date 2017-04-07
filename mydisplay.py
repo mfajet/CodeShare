@@ -53,6 +53,8 @@ notif_socket = socket(AF_INET, SOCK_DGRAM)
 notif_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 notif_socket.bind((serverName, 0))
 username = gethostname()
+loaded = False
+
 
 def syntax_highlight(lang,codebox):
     global tlist
@@ -160,15 +162,34 @@ def start_server(peer_socket, notif_socket, top):
 
 def notif_server(server, top):
     global notif_peers
+    chat = False
+    index = 1.0
+
     while e.isSet():
         try:
             buffer, addr = server.recvfrom(1024)
             notif = buffer.decode()
             print(notif)
-            if notif == "___stop___":
+            if notif[0:10] == "___stop___":
                 server.sendto("___stop___", addr)
                 notif_peers.remove(addr)
                 break
+
+            if notif[0:10] == "___sent___":
+                chat = False
+                top.notif_text.configure(state=NORMAL)
+                top.notif_text.delete(1.0, END)
+                top.notif_text.configure(state=DISABLED)
+                
+            if notif[0:10] == "___chat___":
+                top.Scrolledtext3.configure(state=NORMAL)
+                index = top.Scrolledtext3.index(END)
+                if not chat:
+                    top.notif_text.configure(state=NORMAL)
+                    top.notif_text.insert(END, notif[11:])
+                    top.notif_text.configure(state=DISABLED)
+                    chat = True
+
         except OSError:
             break
         except KeyboardInterrupt:
@@ -235,13 +256,14 @@ escaped_chars = {
     "8": ""
 }
 
-def handle_peer(codeshare, outputpanel, send=False):
+
+def handle_peer(codeshare, outputpanel,LineNum ,send=False, loaded=False):
     if send:
         current = outputpanel.get(1.0, END).strip() or "___null___"
         codeshare.send(current.encode())
-    else:
+    elif not loaded:
         code = codeshare.recv(1024).decode()
-        print(code)
+        print("loading code from peers")
         if code != "___null___":
             outputpanel.insert(1.0, code)
 
@@ -251,6 +273,9 @@ def handle_peer(codeshare, outputpanel, send=False):
 
             if not input_text:
                 break
+            
+            if len(input_text) < 2:
+                continue
 
             command = input_text[0].lower()
             print(input_text)
@@ -363,6 +388,7 @@ def connect_peers(top):
     global chat_connections
     global notif_peers
     global already_connected
+    global loaded
     notif_socket = socket(AF_INET, SOCK_DGRAM)
     if not already_connected:
         try:
@@ -378,10 +404,9 @@ def connect_peers(top):
                 top.Scrolledtext2.insert(END, "Connected to peer: " + server + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
 
-                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
+                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum, False, loaded))
                 t.daemon = True                
-                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum))
-
+                
                 t.start()
                 tlist.append(t)
 
@@ -403,7 +428,7 @@ def connect_peers(top):
                 notif_socket.sendto("__addr___".encode() , (server, notif_port))
                 notif_peers.append((server, notif_port))
                 already_connected = True
-
+                loaded = True
         except OSError as e:
                 print("Socket err", e)
 
@@ -482,7 +507,6 @@ def update_peers():
 
 def broadcast_notif(to_send):
     global notif_peers
-    print("brodacasting " + to_send + "to", str(notif_peers))
     notif_socket = socket(AF_INET, SOCK_DGRAM)
     for addr in notif_peers:
         notif_socket.sendto(to_send.encode(), addr)
@@ -514,14 +538,13 @@ def run_code(input, outputLabel, language):
         outputLabel.configure(state=DISABLED)
     outputLabel.see(END)
 
-update_count = 7
+update_count = 0
 
 def send_message(entry, box):
     global update_count
-    if update_count > 6:
+    if update_count == 0:
         update_peers()
-        update_count = 0
-    update_count = update_count - 1
+    update_count = (update_count + 1) % 2
     message = entry.get()
     if message and not message == None:
         broadcast(message)
@@ -530,6 +553,8 @@ def send_message(entry, box):
         box.configure(state=DISABLED)
         entry.delete(0,END)
         box.see(END)
+        broadcast_notif("___sent___")
+        
 
 def load_file(code_textbox):
     fname = FileDialog.askopenfilename(filetypes=(("Haskell files", "*.hs"),
@@ -607,15 +632,22 @@ class CodeSharer:
 
 
         self.Label2 = Label(top)
-        self.Label2.place(relx=0.0, rely=0.95, height=28, width=766)
+        self.Label2.place(relx=0.01, rely=0.945, height=28, width=100)
         self.Label2.configure(anchor=W)
         self.Label2.configure(justify=LEFT)
-        self.Label2.configure(text="""Who's typing:""")
-        self.Label2.configure(width=766)
+        self.Label2.configure(text="""Notifications:""")
+        self.Label2.configure(width=100)
+
+        self.notif_text = Text(top)
+        self.notif_text.place(relx=0.12, rely=0.9505, height=28, width=300) 
+        self.notif_text.configure(width=300)
+        self.notif_text.configure(background="#d9d9d9")
+        self.notif_text.configure(state=DISABLED)
+        self.notif_text.configure(borderwidth="0")
+        
+        
 
         self.Scrolledtext1 = ScrolledText(top)
-
-
         self.Scrolledtext1.configure()
         self.Scrolledtext1.place(relx=0.0, rely=0.07, relheight=0.87
                 , relwidth=0.52)
@@ -746,8 +778,12 @@ class CodeSharer:
 
 
         self.Label1 = Label(top)
-        self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)
+        self.Label1.place(relx=0.52, rely=0.595, height=18, width=99)
         self.Label1.configure(text='''Chat with peers''')
+
+        # self.Label2 = Label(top)
+        # self.Label2.place(relx=0.70, rely=0.595, height=18, width=99)
+        # self.Label2.configure(text='''Notifications''')
 
         self.Button3 = Button(top)
         self.Button3.place(relx=00, rely=0.0, relheight=0.05, relwidth=.08)
