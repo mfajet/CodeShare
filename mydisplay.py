@@ -35,22 +35,24 @@ serverName = "127.0.0.1"
 serverPort = 2110
 peer_connections = []
 chat_connections = []
+notif_peers = []
 tlist = []
 clientSocket = socket(AF_INET,SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
 peers_list = []
-# peers_list = clientSocket.recv(1024).decode().split()
-# peer_info = peers_list[0]
-# client_port = int(peer_info.split(",")[1])
-# peers_list.remove(peer_info)
 e = threading.Event()
 e.set()
 room_name = ""
 peer_info=""
-
-peer_server = socket(AF_INET,SOCK_STREAM)
-peer_server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+notif_port = None
+client_port = None
 is_host = False
+peer_socket = socket(AF_INET,SOCK_STREAM)
+peer_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+notif_socket = socket(AF_INET, SOCK_DGRAM)
+notif_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+notif_socket.bind((serverName, 0))
+username = gethostname()
 
 def syntax_highlight(lang,codebox):
     global tlist
@@ -67,17 +69,21 @@ def syntax_highlight(lang,codebox):
             codebox.tag_add(str(token), "range_start", "range_end")
             codebox.mark_set("range_start", "range_end")
     t=threading.Thread(target=inner, args=(lexer,codebox))
+    t.daemon = True
     t.start()
     tlist.append(t)
 
-def join_room(room, message, s,label):
+def join_room(room, message, top,label):
     global peers_list
     global peer_info
     global room_name
-    global client_port
-    clientSocket.send(room.encode())
+    global notif_port
+    global peer_socket
+    global notif_socket
+    server_addr, notif_port = notif_socket.getsockname()
+    clientSocket.send((room + " " + str(notif_port)).encode())
     potential_list = clientSocket.recv(1024).decode().split()
-    if potential_list[0] == "NEW_ROOM":
+    if potential_list[0] == "___newroom___":
         peer_info = potential_list[2]
         room_name = potential_list[1]
         label.insert(END, room_name)
@@ -85,36 +91,47 @@ def join_room(room, message, s,label):
         peers_list = []
     else:
         label.insert(END, room)
+        room_name = room
         label.configure(relief=FLAT,  state='readonly')
         peers_list = potential_list
         peer_info = peers_list[0]
-        client_port = int(peer_info.split(",")[1])
         peers_list.remove(peer_info)
     client_port = int(peer_info.split(",")[1])
-    connect_peers(s)
+    peer_socket.bind((serverName, client_port))
+    peer_socket.listen(5)
+    try:
+        start_server(peer_socket, notif_socket, top)
+    except OSError:
+        joinAll()
+
+    connect_peers(top)
     message.destroy()
 
-def create_room(message, top,label):
+def create_room(message,top,label):
     print("Room will be created")
-    global peers_list
     global peer_info
     global room_name
     global client_port
     global is_host
-    clientSocket.send("NEW_ROOM".encode())
+    global notif_port
+    global notif_socket
+    global peer_socket
+   
+    server_addr, notif_port = notif_socket.getsockname()
+    print(server_addr, notif_port)        
+    
+    clientSocket.send(("___newroom___ " + str(notif_port)).encode())
+    
     reply = clientSocket.recv(1024).decode().split()
     room_name = reply[1]
-    peers_list = []
     peer_info = reply[2]
     client_port = int(peer_info.split(",")[1])
+    peer_socket.bind((serverName, client_port))
+    peer_socket.listen(5)
+    is_host = True
 
     try:
-        peer_server.bind((serverName, client_port))
-        peer_server.listen(1)
-        is_host = True
-        t = threading.Thread(target=accept_connections, args=(peer_server, top))
-        t.start()
-        tlist.append(t)
+        start_server(peer_socket, notif_socket, top)
     except OSError:
         joinAll()
     print(room_name)
@@ -130,11 +147,38 @@ def joinAll():
         t.join(timeout=1)
 
 
-print(peers_list)
+def start_server(peer_socket, notif_socket, top):
+    t = threading.Thread(target=client_server, args=(peer_socket, top))
+    t.daemon = True
+    t.start()        
+    t1 = threading.Thread(target=notif_server, args=(notif_socket, top))
+    t1.daemon = True
+    t1.start()
+    tlist.append(t)
+    tlist.append(t1)
 
-def accept_connections(server, top):
-    try:
-        while e.isSet():
+
+def notif_server(server, top):
+    global notif_peers
+    while e.isSet():
+        try:
+            buffer, addr = server.recvfrom(1024)
+            notif = buffer.decode()
+            print(notif)
+            if notif == "___stop___":
+                server.sendto("___stop___", addr)
+                notif_peers.remove(addr)
+                break
+        except OSError:
+            break
+        except KeyboardInterrupt:
+            break
+    print("ending notif thread")
+    
+
+def client_server(server, top):
+    while e.isSet():
+        try:
             t = None
             connection, addr = server.accept()
             message = connection.recv(1024).decode()
@@ -156,27 +200,26 @@ def accept_connections(server, top):
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
+            t.daemon = True            
             t.start()
             tlist.append(t)
-
-    except KeyboardInterrupt:
-        joinAll()
+        except KeyboardInterrupt:
+            break
+            joinAll()
+        except IOError:
+            break
 
 def handle_chat(chat, outputpanel):
+    global username
     while e.isSet():
         try:
             message_ar = chat.recv(1024).decode().split("___space___")
             if message_ar[0] == "___end___":
                 chat_connections.remove(chat)
-                try:
-                    chat.send(("___end______space___" + gethostname()).encode())
-                except OSError:
-                    print("socket already closed")
-                    break
+                chat.send(("___end______space___" + username).encode())
                 outputpanel.configure(state=NORMAL)
                 outputpanel.insert(END, message_ar[1] + " has left the chat", "left")
                 outputpanel.configure(state=DISABLED)
-
                 break
             outputpanel.configure(state=NORMAL)
             outputpanel.insert(END, message_ar[0] + ": " + message_ar[1] + "\n", "left")
@@ -186,14 +229,14 @@ def handle_chat(chat, outputpanel):
             print("socket error", err)
     chat.close()
 
+
+escaped_chars = {
+    "13": "\n",
+    "127": "",
+    "8": ""
+}
+
 def handle_peer(codeshare, outputpanel, send=False):
-
-    escaped_chars = {
-        "13": "\n",
-        "127": "",
-        "8": ""
-    }
-
     if send:
         current = outputpanel.get(1.0, END).strip() or "___null___"
         codeshare.send(current.encode())
@@ -270,15 +313,22 @@ def handle_peer(codeshare, outputpanel, send=False):
     codeshare.close()
 
 def disconnect_peers():
+    global username
     global peer_connections
     global chat_connections
+    
     for conn in peer_connections:
         conn.send("___end___".encode())
-        conn.close()
+        # conn.close()
 
     for conn in chat_connections:
-        conn.send(("___end______space___" + gethostname()).encode())
-        conn.close()
+        conn.send(("___end______space___" + username).encode())
+        # conn.close()
+        
+    notif_socket = socket(AF_INET, SOCK_DGRAM)    
+    for addr in notif_peers:
+        notif_socket.sendto("___end___".encode(), addr)
+        # conn.close()
 
 def close_connections():
     global peer_connections
@@ -291,11 +341,11 @@ def handle_close():
     global root
     global is_host
     e.clear()
+    root.destroy()    
     close_connections()
     if is_host:
         stop_server()
     joinAll()
-    root.destroy()
     root = None
 
 
@@ -311,15 +361,17 @@ already_connected = False
 def connect_peers(top):
     global peer_connections
     global chat_connections
+    global notif_peers
     global already_connected
-    peer_conn = None
+    notif_socket = socket(AF_INET, SOCK_DGRAM)
     if not already_connected:
         try:
             for peer in peers_list:
                 server = peer.split(",")[0]
-                socket_number = int(peer.split(",")[1])
+                peer_port = int(peer.split(",")[1])
+                notif_port = int(peer.split(",")[2])
                 peer_socket = socket(AF_INET,SOCK_STREAM)
-                peer_socket.connect((server,socket_number))
+                peer_socket.connect((server,peer_port))
                 peer_socket.send("___peer___".encode())
 
                 top.Scrolledtext2.configure(state=NORMAL)
@@ -327,24 +379,27 @@ def connect_peers(top):
                 top.Scrolledtext2.configure(state=DISABLED)
 
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
-
+                t.daemon = True                
                 t.start()
                 tlist.append(t)
 
                 chat_socket = socket(AF_INET, SOCK_STREAM)
-                chat_socket.connect((server,socket_number))
+                chat_socket.connect((server,peer_port))
                 chat_socket.send("___chat___".encode())
 
                 t1 = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
+                t1.daemon = True                
                 t1.start()
                 tlist.append(t1)
 
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, "Connected to peer: " + server + "\n", "right")
                 top.Scrolledtext3.configure(state=DISABLED)
-
+                
                 peer_connections.append(peer_socket)
                 chat_connections.append(chat_socket)
+                notif_socket.sendto("__addr___".encode() , (server, notif_port))
+                notif_peers.append((server, notif_port))
                 already_connected = True
 
         except OSError as e:
@@ -383,6 +438,7 @@ def create_CodeSharer(root, *args, **kwargs):
     return (w, top)
 
 def handle_keyboard(event):
+    global username
     start = None
     end = None
     input_text = ""
@@ -395,12 +451,12 @@ def handle_keyboard(event):
     except TclError:
         print("nothing is selected")
     index = event.widget.index(INSERT)
-
+    broadcast_notif("___codeu___ " + username + " is modifying the code at " + index)    
     try:
         char = chr(int(input_text))
         if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
             syntax_highlight(display_support.combobox,event.widget)
-    except e:
+    except ValueError as e:
         pass
 
     if start and end:
@@ -411,14 +467,34 @@ def handle_keyboard(event):
     broadcast_code(to_send)
     return
 
+def update_peers():
+    global notif_peers
+    global serverName
+    global notif_port
+    global room_name
+    clientSocket.send(("___update___" + room_name).encode())
+    buffer = clientSocket.recv(1024).decode()
+    notif_peers = list(map(lambda x: (x.split(",")[0], int(x.split(",")[2])  ), buffer.split()))
+    notif_peers.remove((serverName, notif_port))
+    print(notif_peers)
+
+def broadcast_notif(to_send):
+    global notif_peers
+    print("brodacasting " + to_send + "to", str(notif_peers))
+    notif_socket = socket(AF_INET, SOCK_DGRAM)
+    for addr in notif_peers:
+        notif_socket.sendto(to_send.encode(), addr)
+
+
 def broadcast_code(to_send):
     for conn in peer_connections:
         conn.send(to_send.encode())
 
 def broadcast(to_send):
+    global username
     for conn in chat_connections:
         # TODO: change hostname by username
-        message = gethostname() + "___space___" + to_send
+        message = username + "___space___" + to_send
         conn.send(message.encode())
 
 def run_code(input, outputLabel, language):
@@ -436,7 +512,14 @@ def run_code(input, outputLabel, language):
         outputLabel.configure(state=DISABLED)
     outputLabel.see(END)
 
+update_count = 7
+
 def send_message(entry, box):
+    global update_count
+    if update_count > 6:
+        update_peers()
+        update_count = 0
+    update_count = update_count - 1
     message = entry.get()
     if message and not message == None:
         broadcast(message)
@@ -593,7 +676,7 @@ class CodeSharer:
         self.Scrolledtext3.tag_configure("right", justify="right")
         self.Scrolledtext3.tag_configure("left", justify="left")
         self.Scrolledtext3.configure(state=DISABLED)
-
+        
         self.Button2 = Button(top)
         self.Button2.place(relx=0.92, rely=0.89, relheight=0.05, relwidth=.08)
         self.Button2.configure(activebackground="#d9d9d9")
@@ -605,9 +688,11 @@ class CodeSharer:
         self.Entry1.configure(background="white")
         self.Entry1.configure(font="TkFixedFont")
         self.Entry1.configure(width=306)
+        self.Entry1.bind("<KeyPress>", (lambda x: broadcast_notif("___chat___ " + username + " is typing")))        
         self.Entry1.bind("<Key-Return>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-KP_Enter>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-Insert>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
+
 
         self.Label1 = Label(top)
         self.Label1.place(relx=0.52, rely=0.59, height=18, width=99)

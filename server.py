@@ -29,15 +29,20 @@ def clientThread(connectionSocket, addr):
     try:
         print ("Thread Client Entering Now...")
         host, socket = addr
-        room_name = connectionSocket.recv(1024).decode()
+        msg = connectionSocket.recv(1024).decode().split()
+        room_name = msg[0]
+        notif_port = msg[1]
         peer_num +=1
-        peer = host + "," + str(peer_base_port + peer_num)
-        if room_name == "NEW_ROOM"or not room_name in room_list_dict:
+        peer = host + "," + str(peer_base_port + peer_num) + "," + notif_port
+
+        print(peer)
+
+        if room_name == "___newroom___" or not room_name in room_list_dict:
             room_name = unique_name()
             while room_name in room_list_dict:
                 room_name = unique_name()
             room_list_dict[room_name] =[peer]
-            connectionSocket.send(("NEW_ROOM " + room_name + " " + peer).encode())
+            connectionSocket.send(("___newroom___ " + room_name + " " + peer).encode())
         else:
             peers_list = room_list_dict[room_name]
             peers_list.insert(0, peer)
@@ -53,7 +58,15 @@ def clientThread(connectionSocket, addr):
                 room_list_dict[room_name].remove(peer)
                 print(room_list_dict[room_name]) 
                 break
-            if msg[0:7] == "python3":
+            elif msg[0:12] == "___update___":
+                print(msg)
+                room = msg[12:].strip()
+                print(room)
+                plist = " ".join(room_list_dict[room])
+                print(plist) 
+                connectionSocket.send(plist.encode())
+                continue
+            elif msg[0:7] == "python3":
                 cmd = 'python3 tempFile'
             elif msg[0:7] == "python2":
                 cmd = 'python tempFile'
