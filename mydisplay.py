@@ -189,7 +189,7 @@ def client_server(server, top):
                 break
 
             if message == "___peer___":
-                t = threading.Thread(target=handle_peer, args=(connection, top.Scrolledtext1, True))
+                t = threading.Thread(target=handle_peer, args=(connection, top.Scrolledtext1, top.LineNum, True))
                 top.Scrolledtext2.configure(state=NORMAL)
                 top.Scrolledtext2.insert(END, "Connection accepted from: " + str(addr) + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
@@ -229,7 +229,6 @@ def handle_chat(chat, outputpanel):
             print("socket error", err)
     chat.close()
 
-
 escaped_chars = {
     "13": "\n",
     "127": "",
@@ -242,6 +241,7 @@ def handle_peer(codeshare, outputpanel, send=False):
         codeshare.send(current.encode())
     else:
         code = codeshare.recv(1024).decode()
+        print(code)
         if code != "___null___":
             outputpanel.insert(1.0, code)
 
@@ -263,7 +263,7 @@ def handle_peer(codeshare, outputpanel, send=False):
                 break
 
             index = input_text[1]
-
+            LineNum.redraw()
             if command == "backspace":
                 index_ar = index.split(".")
                 line_index = int(index_ar[0])
@@ -380,6 +380,8 @@ def connect_peers(top):
 
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1))
                 t.daemon = True                
+                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum))
+
                 t.start()
                 tlist.append(t)
 
@@ -437,8 +439,8 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-def handle_keyboard(event):
-    global username
+def handle_keyboard(event, LineNum):
+    LineNum.redraw()
     start = None
     end = None
     input_text = ""
@@ -456,7 +458,7 @@ def handle_keyboard(event):
         char = chr(int(input_text))
         if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
             syntax_highlight(display_support.combobox,event.widget)
-    except ValueError as e:
+    except:
         pass
 
     if start and end:
@@ -549,6 +551,24 @@ def load_file(code_textbox):
             showerror("Open Source File", "Failed to read file\n'%s'" % fname)
         return
 
+def change_style(name, lang, box):
+    print("Name" + name)
+    for tag in box.tag_names():
+        box.tag_delete(tag)
+    try:
+        style = get_style_by_name(name)
+    except:
+        style = get_style_by_name('default')
+
+
+    for token, predefined in style:
+        if predefined['color']:
+            color = "#" + predefined['color']
+        else:
+            color = None
+        box.tag_configure(str(token), foreground=color)
+    syntax_highlight(lang,box)
+
 class CodeSharer:
     def __init__(self, top=None):
         """This class configures and populates the toplevel window.
@@ -574,7 +594,7 @@ class CodeSharer:
         top.title("CodeSharer")
 
         self.Button1 = Button(top)
-        self.Button1.place(relx=0.48, rely=0.02, height=26, width=50)
+        self.Button1.place(relx=0.79, rely=0.01, height=26, width=50)
         self.Button1.configure(activebackground="#d9d9d9")
         self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
         self.Button1.configure(text="""Run""")
@@ -608,7 +628,15 @@ class CodeSharer:
         self.Scrolledtext1.configure(undo="1")
         self.Scrolledtext1.configure(width=10)
         self.Scrolledtext1.configure(wrap=NONE)
-        self.Scrolledtext1.bind("<Key>", handle_keyboard)
+        self.Scrolledtext1.configure(padx="30",pady="1.5")
+        self.LineNum = TextLineNumbers(self.Scrolledtext1)
+        self.LineNum.attach(self.Scrolledtext1)
+        self.LineNum.redraw()
+        self.LineNum.place(x=-30, y=-1.5, relheight=1.1, width=30)
+        self.Scrolledtext1.bind("<Key>", lambda e: handle_keyboard(e,self.LineNum))
+        self.Scrolledtext1.bind("<MouseWheel>",self.LineNum.redraw)
+        self.Scrolledtext1.bind("<Button-4>", self.LineNum.redraw)
+        self.Scrolledtext1.bind("<Button-5>", self.LineNum.redraw)
         #self.Scrolledtext1.bind("<KeyRelease>",lambda e: syntax_highlight(display_support.combobox,self.Scrolledtext1))
         # self.Scrolledtext1.tag_configure("Token.Keyword", foreground="#660029")
         # self.Scrolledtext1.tag_configure("Token.Keyword.Constant", foreground="#660029")
@@ -624,19 +652,30 @@ class CodeSharer:
         # self.Scrolledtext1.tag_configure("Token.Comment.Multi", foreground="#3d3d3d")
         # self.Scrolledtext1.tag_configure("Token.Comment.Single", foreground="#3d3d3d")
         # self.Scrolledtext1.tag_configure("Token.Literal.String", foreground="#248F24")
+
+        # The following is the list of styles that can be used
+        #TODO: Make style selectable?
+        #['manni', 'igor', 'lovelace', 'xcode', 'vim', 'autumn', 'abap', 'vs', 'rrt',
+        #'native', 'perldoc', 'borland', 'arduino', 'tango', 'emacs', 'friendly',
+        #'monokai', 'paraiso-dark', 'colorful', 'murphy', 'bw', 'pastie', 'rainbow_dash',
+        #'algol_nu', 'paraiso-light', 'trac', 'default', 'algol', 'fruity']
+        try:
+            self.Scrolledtext1.configure(yscrollcommand=(lambda fir,las: autoscrollLine(self.Scrolledtext1.vsb, self.LineNum,fir,las)))
+        except Exception as e:
+            print (e)
+            pass
         style = get_style_by_name('default')
 
         for token, predefined in style:
             if predefined['color']:
-                foreground = "#%s" % predefined['color']
+                color = "#" + predefined['color']
             else:
-                foreground = None
-
-            self.Scrolledtext1.tag_configure(str(token), foreground=foreground)
+                color = None
+            self.Scrolledtext1.tag_configure(str(token), foreground=color)
 
 
         self.TCombobox1 = ttk.Combobox(top)
-        self.TCombobox1.place(relx=0.19, rely=0.02, relheight=0.03
+        self.TCombobox1.place(relx=0.34, rely=0.02, relheight=0.03
                 , relwidth=0.23)
         self.value_list = ["python2","python3","Haskell"]
         self.TCombobox1.configure(values=self.value_list)
@@ -649,6 +688,18 @@ class CodeSharer:
 
         self.TCombobox1.bind("<<ComboboxSelected>>", langselection)
 
+        self.TCombobox2 = ttk.Combobox(top)
+        self.TCombobox2.place(relx=0.10, rely=0.02, relheight=0.03
+                , relwidth=0.23)
+        self.TCombobox2.configure(values=['manni', 'igor', 'lovelace', 'xcode', 'vim', 'autumn', 'abap', 'vs', 'rrt',
+        'native', 'perldoc', 'borland', 'arduino', 'tango', 'emacs', 'friendly',
+        'monokai', 'paraiso-dark', 'colorful', 'murphy', 'bw', 'pastie', 'rainbow_dash',
+        'algol_nu', 'paraiso-light', 'trac', 'default', 'algol', 'fruity'])
+        self.TCombobox2.configure(textvariable=style)
+        self.TCombobox2.configure(takefocus="")
+        self.TCombobox2.current(26)
+
+        self.TCombobox2.bind("<<ComboboxSelected>>", lambda e : change_style(self.TCombobox2.get(),display_support.combobox, self.Scrolledtext1))
 
         self.Scrolledtext2 = ScrolledText(top)
         self.Scrolledtext2.place(relx=0.52, rely=0.07, relheight=0.52
@@ -760,7 +811,7 @@ class AutoScroll(object):
         #  could be used for scrolled entry widget for which vertical
         #  scrolling is not supported. 5/7/14.
         try:
-            vsb = ttk.Scrollbar(master, orient="vertical", command=self.yview)
+            self.vsb = ttk.Scrollbar(master, orient="vertical", command=self.yview)
         except:
             pass
         hsb = ttk.Scrollbar(master, orient="horizontal", command=self.xview)
@@ -768,14 +819,14 @@ class AutoScroll(object):
         #self.configure(yscrollcommand=_autoscroll(vsb),
         #    xscrollcommand=_autoscroll(hsb))
         try:
-            self.configure(yscrollcommand=self._autoscroll(vsb))
+            self.configure(yscrollcommand=self._autoscroll(self.vsb))
         except:
             pass
         self.configure(xscrollcommand=self._autoscroll(hsb))
 
         self.grid(column=0, row=0, sticky="nsew")
         try:
-            vsb.grid(column=1, row=0, sticky="ns")
+            self.vsb.grid(column=1, row=0, sticky="ns")
         except:
             pass
         hsb.grid(column=0, row=1, sticky="ew")
@@ -810,6 +861,16 @@ class AutoScroll(object):
     def __str__(self):
         return str(self.master)
 
+def autoscrollLine(sbar,LineNum, first, last):
+    LineNum.redraw()
+    """Hide and show scrollbar as needed."""
+    first, last = float(first), float(last)
+    if first <= 0 and last >= 1:
+        sbar.grid_remove()
+    else:
+        sbar.grid()
+    sbar.set(first, last)
+
 def _create_container(func):
     """Creates a ttk Frame with a given master, and use this new frame to
     place the scrollbars and the widget."""
@@ -826,6 +887,29 @@ class ScrolledText(AutoScroll, Text):
     def __init__(self, master, **kw):
         Text.__init__(self, master, **kw)
         AutoScroll.__init__(self, master)
+
+
+######Taken from http://stackoverflow.com/a/16375233
+class TextLineNumbers(Canvas):
+    def __init__(self, *args, **kwargs):
+        Canvas.__init__(self, *args, **kwargs)
+        self.textwidget = None
+
+    def attach(self, text_widget):
+        self.textwidget = text_widget
+
+    def redraw(self, *args):
+        '''redraw line numbers'''
+        print("redrawing")
+        self.delete("all")
+        i = self.textwidget.index("@0,0")
+        while True :
+            dline= self.textwidget.dlineinfo(i)
+            if dline is None: break
+            y = dline[1]
+            linenum = str(i).split(".")[0]
+            self.create_text(2,y,anchor="nw",font=self.textwidget['font'], text=linenum)
+            i = self.textwidget.index("%s+1line" % i)
 
 if __name__ == "__main__":
     vp_start_gui()
