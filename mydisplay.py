@@ -163,8 +163,6 @@ def start_server(peer_socket, notif_socket, top):
 def notif_server(server, top):
     global notif_peers
     chat = False
-    index = 1.0
-
     while e.isSet():
         try:
             buffer, addr = server.recvfrom(1024)
@@ -175,20 +173,21 @@ def notif_server(server, top):
                 notif_peers.remove(addr)
                 break
 
-            if notif[0:10] == "___sent___":
+            if notif == "___addr___":
+                notif_peers.append(addr)
+
+            elif notif[0:10] == "___sent___":
                 chat = False
                 top.notif_text.configure(state=NORMAL)
                 top.notif_text.delete(1.0, END)
                 top.notif_text.configure(state=DISABLED)
-                
-            if notif[0:10] == "___chat___":
-                top.Scrolledtext3.configure(state=NORMAL)
-                index = top.Scrolledtext3.index(END)
-                if not chat:
-                    top.notif_text.configure(state=NORMAL)
-                    top.notif_text.insert(END, notif[11:])
-                    top.notif_text.configure(state=DISABLED)
-                    chat = True
+            else:
+                chat = False                
+                top.notif_text.configure(state=NORMAL)
+                top.notif_text.delete(1.0, END)
+                top.notif_text.insert(END, notif)
+                top.notif_text.configure(state=DISABLED)
+            
 
         except OSError:
             break
@@ -341,7 +340,8 @@ def disconnect_peers():
     global username
     global peer_connections
     global chat_connections
-    
+    global notif_socket
+
     for conn in peer_connections:
         conn.send("___end___".encode())
         # conn.close()
@@ -349,8 +349,7 @@ def disconnect_peers():
     for conn in chat_connections:
         conn.send(("___end______space___" + username).encode())
         # conn.close()
-        
-    notif_socket = socket(AF_INET, SOCK_DGRAM)    
+            
     for addr in notif_peers:
         notif_socket.sendto("___end___".encode(), addr)
         # conn.close()
@@ -389,7 +388,7 @@ def connect_peers(top):
     global notif_peers
     global already_connected
     global loaded
-    notif_socket = socket(AF_INET, SOCK_DGRAM)
+    global notif_socket
     if not already_connected:
         try:
             for peer in peers_list:
@@ -425,7 +424,7 @@ def connect_peers(top):
                 
                 peer_connections.append(peer_socket)
                 chat_connections.append(chat_socket)
-                notif_socket.sendto("__addr___".encode() , (server, notif_port))
+                notif_socket.sendto("___addr___".encode(), (server, notif_port))
                 notif_peers.append((server, notif_port))
                 already_connected = True
                 loaded = True
@@ -478,7 +477,7 @@ def handle_keyboard(event, LineNum):
     except TclError:
         print("nothing is selected")
     index = event.widget.index(INSERT)
-    broadcast_notif("___codeu___ " + username + " is modifying the code at " + index)    
+    broadcast_notif(username + " is modifying the code at " + index)    
     try:
         char = chr(int(input_text))
         if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
@@ -494,20 +493,9 @@ def handle_keyboard(event, LineNum):
     broadcast_code(to_send)
     return
 
-def update_peers():
-    global notif_peers
-    global serverName
-    global notif_port
-    global room_name
-    clientSocket.send(("___update___" + room_name).encode())
-    buffer = clientSocket.recv(1024).decode()
-    notif_peers = list(map(lambda x: (x.split(",")[0], int(x.split(",")[2])  ), buffer.split()))
-    notif_peers.remove((serverName, notif_port))
-    print(notif_peers)
-
 def broadcast_notif(to_send):
     global notif_peers
-    notif_socket = socket(AF_INET, SOCK_DGRAM)
+    global notif_socket
     for addr in notif_peers:
         notif_socket.sendto(to_send.encode(), addr)
 
@@ -525,6 +513,7 @@ def broadcast(to_send):
 
 def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
+    broadcast_notif(username + " is executing the code")        
     if code.strip() and code:
         toSend = language + " " + code
         clientSocket.send(toSend.encode())
@@ -538,13 +527,8 @@ def run_code(input, outputLabel, language):
         outputLabel.configure(state=DISABLED)
     outputLabel.see(END)
 
-update_count = 0
 
 def send_message(entry, box):
-    global update_count
-    if update_count == 0:
-        update_peers()
-    update_count = (update_count + 1) % 2
     message = entry.get()
     if message and not message == None:
         broadcast(message)
@@ -771,7 +755,7 @@ class CodeSharer:
         self.Entry1.configure(background="white")
         self.Entry1.configure(font="TkFixedFont")
         self.Entry1.configure(width=306)
-        self.Entry1.bind("<KeyPress>", (lambda x: broadcast_notif("___chat___ " + username + " is typing")))        
+        self.Entry1.bind("<KeyPress>", (lambda x: broadcast_notif(username + " is typing...")))        
         self.Entry1.bind("<Key-Return>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-KP_Enter>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-Insert>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))

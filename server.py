@@ -58,14 +58,6 @@ def clientThread(connectionSocket, addr):
                 room_list_dict[room_name].remove(peer)
                 print(room_list_dict[room_name]) 
                 break
-            elif msg[0:12] == "___update___":
-                print(msg)
-                room = msg[12:].strip()
-                print(room)
-                plist = " ".join(room_list_dict[room])
-                print(plist) 
-                connectionSocket.send(plist.encode())
-                continue
             elif msg[0:7] == "python3":
                 cmd = 'python3 tempFile'
             elif msg[0:7] == "python2":
