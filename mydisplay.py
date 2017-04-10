@@ -515,18 +515,32 @@ def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
     broadcast_notif(username + " is executing the code")
     if code.strip() and code:
-        toSend = language + " " + code
-        clientSocket.send(toSend.encode())
+        clientSocket.send(language.encode())
+        host, port =clientSocket.recv(1024).decode().split()
+        code_socket = socket(AF_INET, SOCK_STREAM)
+        #to reuse socket faster. It has very little consequence for ftp client.
+        code_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        code_socket.connect((host, int(port)))
+        i = 0
+        while True:
+            data = code[i*1024:(i+1)*1024]
+            i+=1
+            if (not data or data == '' or len(data) <= 0):
+                break
+            else:
+                code_socket.send(data.encode())
+
+        code_socket.send("___EOF___".encode())
         output=""
         while True:
-            data = clientSocket.recv(1024).decode()
+            data = code_socket.recv(1024).decode()
             print("message" + data)
             if (data[-9:] == "___EOF___" or not data or data == '' or len(data) <= 0):
                 output +=data[0:-9]
                 break
             else:
                 output +=data
-
+        code_socket.close()
         outputLabel.configure(state=NORMAL)
         outputLabel.insert(END, output)
         outputLabel.configure(state=DISABLED)

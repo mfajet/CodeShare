@@ -12,9 +12,11 @@ import random
 tList = []
 chat_rooms = []
 peer_base_port = 3000
+base_code_port = 10000
 room_list_dict = {}
 choose_from = string.ascii_letters + "0123456789"
 peer_num = 0
+code_num = 0
 
 def unique_name():
     str = ""
@@ -28,7 +30,7 @@ def clientThread(connectionSocket, addr):
     room_name = None
     try:
         print ("Thread Client Entering Now...")
-        host, socket = addr
+        host, sock = addr
         msg = connectionSocket.recv(1024).decode().split()
         room_name = msg[0]
         notif_port = msg[1]
@@ -51,6 +53,7 @@ def clientThread(connectionSocket, addr):
             room_list_dict[room_name] = peers_list
             print(peers_list)
         while True:
+            global code_num
             f = open("tempFile",'w')
             # print("inside while loop")
             msg = connectionSocket.recv(1024).decode()
@@ -67,8 +70,23 @@ def clientThread(connectionSocket, addr):
             else:
                 connectionSocket.send("Unknown language".encode())
                 continue
+            code_socket = socket(AF_INET, SOCK_STREAM)
+            # reuse port
+            code_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
+            code_socket.bind(('127.0.0.1', base_code_port + code_num))
+            code_socket.listen(15)
+            connectionSocket.send(("127.0.0.1 " + str(base_code_port + code_num) ).encode())
+            code_num +=1
+            code_connection, code_host = code_socket.accept()
             f.write(msg[8:])
+            while True:
+                data = code_connection.recv(1024).decode()
+                if (data[-9:] == "___EOF___" or not data or data == '' or len(data) <= 0):
+                    f.write(data[0:-9])
+                    break
+                else:
+                    f.write(data)
             f.close()
             try:
                 p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
@@ -85,9 +103,8 @@ def clientThread(connectionSocket, addr):
                 if (not data or data == '' or len(data) <= 0):
                     break
                 else:
-                    connectionSocket.send(data)
-
-            connectionSocket.send("___EOF___".encode())
+                    code_connection.send(data)
+            code_connection.close()
 
     except OSError as e:
         # A socket error
