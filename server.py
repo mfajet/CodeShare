@@ -56,7 +56,7 @@ def clientThread(connectionSocket, addr):
             msg = connectionSocket.recv(1024).decode()
             if msg == "___end___":
                 room_list_dict[room_name].remove(peer)
-                print(room_list_dict[room_name]) 
+                print(room_list_dict[room_name])
                 break
             elif msg[0:7] == "python3":
                 cmd = 'python3 tempFile'
@@ -73,11 +73,21 @@ def clientThread(connectionSocket, addr):
             try:
                 p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
                 output = p.stdout.read()
+
                 if(output.decode() =="" or output.decode()==None):
-                    output="[No output]\n".encode()
+                    output="[No output]\n"
             except:
-                output = "Unexpected error\n".encode()
-            connectionSocket.send(output)
+                output = "Unexpected error\n"
+            i = 0
+            while True:
+                data = output[i*1024:(i+1)*1024]
+                i+=1
+                if (not data or data == '' or len(data) <= 0):
+                    break
+                else:
+                    connectionSocket.send(data)
+
+            connectionSocket.send("___EOF___".encode())
 
     except OSError as e:
         # A socket error

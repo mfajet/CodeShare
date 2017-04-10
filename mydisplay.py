@@ -118,12 +118,12 @@ def create_room(message,top,label):
     global notif_port
     global notif_socket
     global peer_socket
-   
+
     server_addr, notif_port = notif_socket.getsockname()
-    print(server_addr, notif_port)        
-    
+    print(server_addr, notif_port)
+
     clientSocket.send(("___newroom___ " + str(notif_port)).encode())
-    
+
     reply = clientSocket.recv(1024).decode().split()
     room_name = reply[1]
     peer_info = reply[2]
@@ -152,7 +152,7 @@ def joinAll():
 def start_server(peer_socket, notif_socket, top):
     t = threading.Thread(target=client_server, args=(peer_socket, top))
     t.daemon = True
-    t.start()        
+    t.start()
     t1 = threading.Thread(target=notif_server, args=(notif_socket, top))
     t1.daemon = True
     t1.start()
@@ -182,19 +182,19 @@ def notif_server(server, top):
                 top.notif_text.delete(1.0, END)
                 top.notif_text.configure(state=DISABLED)
             else:
-                chat = False                
+                chat = False
                 top.notif_text.configure(state=NORMAL)
                 top.notif_text.delete(1.0, END)
                 top.notif_text.insert(END, notif)
                 top.notif_text.configure(state=DISABLED)
-            
+
 
         except OSError:
             break
         except KeyboardInterrupt:
             break
     print("ending notif thread")
-    
+
 
 def client_server(server, top):
     while e.isSet():
@@ -220,7 +220,7 @@ def client_server(server, top):
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, str(addr) + " has joined\n", "left")
                 top.Scrolledtext3.configure(state=DISABLED)
-            t.daemon = True            
+            t.daemon = True
             t.start()
             tlist.append(t)
         except KeyboardInterrupt:
@@ -272,7 +272,7 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False, loaded=False):
 
             if not input_text:
                 break
-            
+
             if len(input_text) < 2:
                 continue
 
@@ -349,7 +349,7 @@ def disconnect_peers():
     for conn in chat_connections:
         conn.send(("___end______space___" + username).encode())
         # conn.close()
-            
+
     for addr in notif_peers:
         notif_socket.sendto("___end___".encode(), addr)
         # conn.close()
@@ -365,7 +365,7 @@ def handle_close():
     global root
     global is_host
     e.clear()
-    root.destroy()    
+    root.destroy()
     close_connections()
     if is_host:
         stop_server()
@@ -404,8 +404,8 @@ def connect_peers(top):
                 top.Scrolledtext2.configure(state=DISABLED)
 
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum, False, loaded))
-                t.daemon = True                
-                
+                t.daemon = True
+
                 t.start()
                 tlist.append(t)
 
@@ -414,14 +414,14 @@ def connect_peers(top):
                 chat_socket.send("___chat___".encode())
 
                 t1 = threading.Thread(target=handle_chat, args=(chat_socket, top.Scrolledtext3))
-                t1.daemon = True                
+                t1.daemon = True
                 t1.start()
                 tlist.append(t1)
 
                 top.Scrolledtext3.configure(state=NORMAL)
                 top.Scrolledtext3.insert(END, "Connected to peer: " + server + "\n", "right")
                 top.Scrolledtext3.configure(state=DISABLED)
-                
+
                 peer_connections.append(peer_socket)
                 chat_connections.append(chat_socket)
                 notif_socket.sendto("___addr___".encode(), (server, notif_port))
@@ -477,7 +477,7 @@ def handle_keyboard(event, LineNum):
     except TclError:
         print("nothing is selected")
     index = event.widget.index(INSERT)
-    broadcast_notif(username + " is modifying the code at " + index)    
+    broadcast_notif(username + " is modifying the code at " + index)
     try:
         char = chr(int(input_text))
         if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
@@ -513,11 +513,20 @@ def broadcast(to_send):
 
 def run_code(input, outputLabel, language):
     code = input.get(1.0, END)
-    broadcast_notif(username + " is executing the code")        
+    broadcast_notif(username + " is executing the code")
     if code.strip() and code:
         toSend = language + " " + code
         clientSocket.send(toSend.encode())
-        output = clientSocket.recv(1024).decode()
+        output=""
+        while True:
+            data = clientSocket.recv(1024).decode()
+            print("message" + data)
+            if (data[-9:] == "___EOF___" or not data or data == '' or len(data) <= 0):
+                output +=data[0:-9]
+                break
+            else:
+                output +=data
+
         outputLabel.configure(state=NORMAL)
         outputLabel.insert(END, output)
         outputLabel.configure(state=DISABLED)
@@ -538,7 +547,7 @@ def send_message(entry, box):
         entry.delete(0,END)
         box.see(END)
         broadcast_notif("___sent___")
-        
+
 
 def load_file(code_textbox):
     fname = FileDialog.askopenfilename(filetypes=(("Haskell files", "*.hs"),
@@ -623,13 +632,13 @@ class CodeSharer:
         self.Label2.configure(width=100)
 
         self.notif_text = Text(top)
-        self.notif_text.place(relx=0.12, rely=0.9505, height=28, width=300) 
+        self.notif_text.place(relx=0.12, rely=0.9505, height=28, width=500)
         self.notif_text.configure(width=300)
         self.notif_text.configure(background="#d9d9d9")
         self.notif_text.configure(state=DISABLED)
         self.notif_text.configure(borderwidth="0")
-        
-        
+
+
 
         self.Scrolledtext1 = ScrolledText(top)
         self.Scrolledtext1.configure()
@@ -743,7 +752,7 @@ class CodeSharer:
         self.Scrolledtext3.tag_configure("right", justify="right")
         self.Scrolledtext3.tag_configure("left", justify="left")
         self.Scrolledtext3.configure(state=DISABLED)
-        
+
         self.Button2 = Button(top)
         self.Button2.place(relx=0.92, rely=0.89, relheight=0.05, relwidth=.08)
         self.Button2.configure(activebackground="#d9d9d9")
@@ -755,7 +764,7 @@ class CodeSharer:
         self.Entry1.configure(background="white")
         self.Entry1.configure(font="TkFixedFont")
         self.Entry1.configure(width=306)
-        self.Entry1.bind("<KeyPress>", (lambda x: broadcast_notif(username + " is typing...")))        
+        self.Entry1.bind("<KeyPress>", (lambda x: broadcast_notif(username + " is typing...")))
         self.Entry1.bind("<Key-Return>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-KP_Enter>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-Insert>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
