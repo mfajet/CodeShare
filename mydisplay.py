@@ -644,6 +644,13 @@ def save_file(code_textbox,lang):
             print("Problem saving file")
         return
 
+def select_all(textbox):
+    textbox.tag_add(SEL, "1.0", END)
+    textbox.mark_set(INSERT, "1.0")
+    textbox.see(INSERT)
+    return "break"
+
+
 def change_style(name, lang, box):
     print("Name" + name)
     for tag in box.tag_names():
@@ -734,6 +741,8 @@ class CodeSharer:
         self.EditorTextbox.bind("<MouseWheel>",self.LineNum.redraw)
         self.EditorTextbox.bind("<Button-4>", self.LineNum.redraw)
         self.EditorTextbox.bind("<Button-5>", self.LineNum.redraw)
+        self.EditorTextbox.bind("<Control-a>", lambda x: select_all(self.EditorTextbox))
+
         #self.EditorTextbox.bind("<KeyRelease>",lambda e: syntax_highlight(display_support.combobox,self.EditorTextbox))
         # self.EditorTextbox.tag_configure("Token.Keyword", foreground="#660029")
         # self.EditorTextbox.tag_configure("Token.Keyword.Constant", foreground="#660029")
@@ -862,6 +871,8 @@ class CodeSharer:
         self.ClearButton.configure(activebackground="#d9d9d9")
         self.ClearButton.configure(command=(lambda : clear_output(self.OutputTextbox)))
         self.ClearButton.configure(text="""Clear""")
+        createToolTip(self.ClearButton, "Clear all code output.")
+
         top.bind("<Control-l>", lambda x : clear_output(self.OutputTextbox))
         # self.NotificationsLabel = Label(top)
         # self.NotificationsLabel.place(relx=0.70, rely=0.595, height=18, width=99)
