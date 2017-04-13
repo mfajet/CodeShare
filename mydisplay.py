@@ -592,6 +592,32 @@ def load_file(code_textbox,linenum,langbox):
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,"Unable to open file. Press CTRL-Z to undo and return to previous state")
         return
+last_file_name = ""
+last_file_dir = ""
+def save_file(code_textbox,lang):
+    global last_file_name
+    global last_file_dir
+    if lang == "Haskell":
+        types = (("Haskell files", "*.hs"),("Python files", "*.py"),("All files", "*.*") )
+    else:
+        types= (("Python files", "*.py"),("Haskell files", "*.hs"),("All files", "*.*") )
+    if last_file_dir == "":
+        fname = FileDialog.asksaveasfilename(filetypes=types,initialfile=last_file_name)
+    else:
+        fname = FileDialog.asksaveasfilename(filetypes=types,initialfile=last_file_name,initialdir=last_file_dir)
+
+    if fname:
+        text = ""
+        try:
+            f = open(fname,"w")
+            f.write(code_textbox.get(1.0,END))
+            f.close()
+            directory_arr = fname.split("/")
+            last_file_name = directory_arr[-1]
+            last_file_dir = "/".join(directory_arr[0:-1])
+        except:
+            print("Problem saving file")
+        return
 
 def change_style(name, lang, box):
     print("Name" + name)
@@ -809,11 +835,21 @@ class CodeSharer:
         # self.Label2.configure(text='''Notifications''')
 
         self.Button3 = Button(top)
-        self.Button3.place(relx=00, rely=0.0, relheight=0.05, relwidth=.08)
+        self.Button3.place(relx=00, rely=0.01, relheight=0.05, relwidth=.08)
         self.Button3.configure(activebackground="#d9d9d9")
         self.Button3.configure(text='''Open''')
         self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1, self.LineNum,self.TCombobox1)))
         createToolTip(self.Button3, "Open a file.")
+        top.bind("<Control-o>", lambda x: load_file(self.Scrolledtext1, self.LineNum,self.TCombobox1))
+
+        self.SaveButton = Button(top)
+        self.SaveButton.place(relx=.92, rely=0.01, relheight=0.05, relwidth=.08)
+        self.SaveButton.configure(activebackground="#d9d9d9")
+        self.SaveButton.configure(text='''Save''')
+        self.SaveButton.configure(command=(lambda:  save_file(self.Scrolledtext1, self.TCombobox1.get())))
+        createToolTip(self.SaveButton, "Save your code to a file.")
+        top.bind("<Control-s>", lambda x: save_file(self.Scrolledtext1, self.TCombobox1.get()))
+
 
         self.Message1 = Message(top)
         self.Message1.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
