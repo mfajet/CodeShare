@@ -97,11 +97,14 @@ def clientThread(connectionSocket, addr):
                 try:
                     timer.start()
                     output = p.stdout.read()
-                finally:
-                    timer.cancel()
-                    output="Execution cancelled. Process took too long.".encode()
 
-                if(output =="" or output.decode() =="" or output.decode()==None):
+                finally:
+                    if(not timer.isAlive()):
+                        output="Execution cancelled. Process took too long.\n".encode()
+                    timer.cancel()
+
+
+                if(output.decode() =="" or output.decode()==None):
                     output="[No output]\n".encode()
             except:
                 output = "Unexpected error\n".encode()

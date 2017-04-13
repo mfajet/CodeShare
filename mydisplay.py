@@ -571,6 +571,11 @@ def send_message(entry, box):
         box.see(END)
         broadcast_notif("___sent___")
 
+def clear_output(textbox):
+    textbox.configure(state=NORMAL)
+    textbox.delete("1.0",END)
+    textbox.configure(state=DISABLED)
+
 last_open_dir=""
 def load_file(code_textbox,linenum,langbox):
     global last_open_dir
@@ -852,6 +857,11 @@ class CodeSharer:
         self.Label1.place(relx=0.52, rely=0.595, height=18, width=99)
         self.Label1.configure(text='''Chat with peers''')
 
+        self.ClearButton = Button(top)
+        self.ClearButton.place(relx=0.79, rely=0.595, height=18, width=50)
+        self.ClearButton.configure(activebackground="#d9d9d9")
+        self.ClearButton.configure(command=(lambda : clear_output(self.Scrolledtext3)))
+        self.ClearButton.configure(text="""Clear""")
         # self.Label2 = Label(top)
         # self.Label2.place(relx=0.70, rely=0.595, height=18, width=99)
         # self.Label2.configure(text='''Notifications''')
