@@ -563,11 +563,18 @@ def send_message(entry, box):
         box.see(END)
         broadcast_notif("___sent___")
 
-
+last_open_dir=""
 def load_file(code_textbox,linenum,langbox):
-    fname = FileDialog.askopenfilename(filetypes=(("Haskell files", "*.hs"),
-                                           ("Python files", "*.py"),
-                                           ("All files", "*.*") ))
+    global last_open_dir
+    if langbox.get() == "Haskell":
+        types = (("Haskell files", "*.hs"),("Python files", "*.py"),("All files", "*.*") )
+    else:
+        types= (("Python files", "*.py"),("Haskell files", "*.hs"),("All files", "*.*") )
+
+    if last_open_dir =="":
+        fname = FileDialog.askopenfilename(filetypes=types)
+    else:
+        fname = FileDialog.askopenfilename(filetypes=types, initialdir=last_open_dir)
     if fname:
         text = ""
         try:
@@ -576,6 +583,8 @@ def load_file(code_textbox,linenum,langbox):
                 data = f.read()
                 if (not data or data == '' or len(data) <= 0):
                     f.close()
+                    directory_arr = fname.split("/")
+                    last_open_dir = "/".join(directory_arr[0:-1])
                     break
                 text+=data
             code_textbox.delete(1.0,END)
