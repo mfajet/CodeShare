@@ -83,6 +83,8 @@ def join_room(room, message, top,label):
     global notif_port
     global peer_socket
     global notif_socket
+    if room=="":
+        return
     server_addr, notif_port = notif_socket.getsockname()
     clientSocket.send((room + " " + str(notif_port)).encode())
     potential_list = clientSocket.recv(1024).decode().split()
@@ -566,6 +568,8 @@ def send_message(entry, box):
 last_open_dir=""
 def load_file(code_textbox,linenum,langbox):
     global last_open_dir
+    broadcast_notif(username + " is opening a file.")
+
     if langbox.get() == "Haskell":
         types = (("Haskell files", "*.hs"),("Python files", "*.py"),("All files", "*.*") )
     else:
@@ -585,6 +589,7 @@ def load_file(code_textbox,linenum,langbox):
                     f.close()
                     directory_arr = fname.split("/")
                     last_open_dir = "/".join(directory_arr[0:-1])
+                    broadcast_notif(username + " opened " + directory_arr[-1])
                     break
                 text+=data
             code_textbox.delete(1.0,END)
@@ -681,14 +686,14 @@ class CodeSharer:
 
 
         self.Label2 = Label(top)
-        self.Label2.place(relx=0.01, rely=0.945, height=28, width=100)
+        self.Label2.place(relx=0.01, rely=0.945, height=28, width=600)
         self.Label2.configure(anchor=W)
         self.Label2.configure(justify=LEFT)
-        self.Label2.configure(text="""Notifications:""")
+        self.Label2.configure(text="""Notifications:  """)
         self.Label2.configure(width=100)
 
-        self.notif_text = Text(top)
-        self.notif_text.place(relx=0.12, rely=0.9505, height=28, width=500)
+        self.notif_text = Text(self.Label2)
+        self.notif_text.place(x=88,rely=0.7, anchor="w",height=28, width=500)
         self.notif_text.configure(width=300)
         self.notif_text.configure(background="#d9d9d9")
         self.notif_text.configure(state=DISABLED)
