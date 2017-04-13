@@ -29,6 +29,7 @@ except ImportError:
     py3 = 1
 
 import mydisplay_support as display_support
+from tooltip import *
 from socket import *
 
 serverName = "127.0.0.1"
@@ -563,9 +564,9 @@ def send_message(entry, box):
         broadcast_notif("___sent___")
 
 
-def load_file(code_textbox):
+def load_file(code_textbox,linenum,langbox):
     fname = FileDialog.askopenfilename(filetypes=(("Haskell files", "*.hs"),
-                                           ("Python files", "*.py;*.pyc"),
+                                           ("Python files", "*.py"),
                                            ("All files", "*.*") ))
     if fname:
         text = ""
@@ -579,8 +580,17 @@ def load_file(code_textbox):
                 text+=data
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,text)
-        except:                     # <- naked except is a bad idea
-            showerror("Open Source File", "Failed to read file\n'%s'" % fname)
+            linenum.redraw()
+            if(fname[-3:]==".hs"):
+                lang = "Haskell"
+                langbox.current(2)
+            else:
+                lang="Python"
+                langbox.current(1)
+            syntax_highlight(lang,code_textbox)
+        except:
+            code_textbox.delete(1.0,END)
+            code_textbox.insert(END,"Unable to open file. Press CTRL-Z to undo and return to previous state")
         return
 
 def change_style(name, lang, box):
@@ -625,17 +635,14 @@ class CodeSharer:
         top.geometry("772x539+503+177")
         top.title("CodeSharer")
 
-        self.Button1 = Button(top)
-        self.Button1.place(relx=0.79, rely=0.01, height=26, width=50)
-        self.Button1.configure(activebackground="#d9d9d9")
-        self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
-        self.Button1.configure(text="""Run""")
+
 
         global room_name
         self.RoomLabel = Entry(top)
         self.RoomLabel.configure(background="#d9d9d9", bd=0, highlightthickness=0)
         self.RoomLabel.place(relx=0.60, rely=0.02, height=26, width=120)
         self.RoomLabel.insert(END, "Room: " )
+        createToolTip(self.RoomLabel, "Share this name to code with others.")
 
 
         self.Label2 = Label(top)
@@ -693,7 +700,6 @@ class CodeSharer:
         # self.Scrolledtext1.tag_configure("Token.Literal.String", foreground="#248F24")
 
         # The following is the list of styles that can be used
-        #TODO: Make style selectable?
         #['manni', 'igor', 'lovelace', 'xcode', 'vim', 'autumn', 'abap', 'vs', 'rrt',
         #'native', 'perldoc', 'borland', 'arduino', 'tango', 'emacs', 'friendly',
         #'monokai', 'paraiso-dark', 'colorful', 'murphy', 'bw', 'pastie', 'rainbow_dash',
@@ -721,6 +727,15 @@ class CodeSharer:
         self.TCombobox1.configure(textvariable=display_support.combobox)
         self.TCombobox1.configure(takefocus="")
         self.TCombobox1.current(1)
+        createToolTip(self.TCombobox1, "Select your language.")
+
+        self.Button1 = Button(top)
+        self.Button1.place(relx=0.79, rely=0.01, height=26, width=50)
+        self.Button1.configure(activebackground="#d9d9d9")
+        self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
+        self.Button1.configure(text="""Run""")
+        top.bind("<F5>",(lambda x : run_code(self.Scrolledtext1, self.Scrolledtext2,self.TCombobox1.get())))
+        createToolTip(self.Button1, "Press F5 to run.")
 
         def langselection(e):
             display_support.combobox = self.TCombobox1.get()
@@ -737,6 +752,7 @@ class CodeSharer:
         self.TCombobox2.configure(textvariable=style)
         self.TCombobox2.configure(takefocus="")
         self.TCombobox2.current(26)
+        createToolTip(self.TCombobox2, "Select your style.")
 
         self.TCombobox2.bind("<<ComboboxSelected>>", lambda e : change_style(self.TCombobox2.get(),display_support.combobox, self.Scrolledtext1))
 
@@ -796,7 +812,8 @@ class CodeSharer:
         self.Button3.place(relx=00, rely=0.0, relheight=0.05, relwidth=.08)
         self.Button3.configure(activebackground="#d9d9d9")
         self.Button3.configure(text='''Open''')
-        self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1)))
+        self.Button3.configure(command=(lambda: load_file(self.Scrolledtext1, self.LineNum,self.TCombobox1)))
+        createToolTip(self.Button3, "Open a file.")
 
         self.Message1 = Message(top)
         self.Message1.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
@@ -932,7 +949,7 @@ class ScrolledText(AutoScroll, Text):
         AutoScroll.__init__(self, master)
 
 
-######Taken from http://stackoverflow.com/a/16375233
+######Taken and edited from from http://stackoverflow.com/a/16375233
 class TextLineNumbers(Canvas):
     def __init__(self, *args, **kwargs):
         Canvas.__init__(self, *args, **kwargs)
@@ -945,13 +962,14 @@ class TextLineNumbers(Canvas):
         '''redraw line numbers'''
         print("redrawing")
         self.delete("all")
+
         i = self.textwidget.index("@0,0")
         while True :
             dline= self.textwidget.dlineinfo(i)
             if dline is None: break
             y = dline[1]
             linenum = str(i).split(".")[0]
-            self.create_text(2,y,anchor="nw",font=self.textwidget['font'], text=linenum)
+            self.create_text(2,y,anchor="nw",font=self.textwidget['font'], text=linenum,fill="#ff4c4c")
             i = self.textwidget.index("%s+1line" % i)
 
 if __name__ == "__main__":
