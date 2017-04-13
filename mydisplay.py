@@ -514,8 +514,14 @@ def broadcast(to_send):
         message = username + "___space___" + to_send
         conn.send(message.encode())
 
-def run_code(input, outputLabel, language):
-    code = input.get(1.0, END)
+def run_code_wrapper(code, outputLabel, language):
+    t = threading.Thread(target=run_code, args=(code, outputLabel, language))
+    t.daemon = True
+    t.start()
+    tlist.append(t)
+
+def run_code(c, outputLabel, language):
+    code = c.get(1.0, END)
     broadcast_notif(username + " is executing the code")
     if code.strip() and code:
         clientSocket.send(language.encode())
@@ -772,9 +778,9 @@ class CodeSharer:
         self.Button1 = Button(top)
         self.Button1.place(relx=0.79, rely=0.01, height=26, width=50)
         self.Button1.configure(activebackground="#d9d9d9")
-        self.Button1.configure(command=(lambda : run_code(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
+        self.Button1.configure(command=(lambda : run_code_wrapper(self.Scrolledtext1, self.Scrolledtext2,display_support.combobox)))
         self.Button1.configure(text="""Run""")
-        top.bind("<F5>",(lambda x : run_code(self.Scrolledtext1, self.Scrolledtext2,self.TCombobox1.get())))
+        top.bind("<F5>",(lambda x : run_code_wrapper(self.Scrolledtext1, self.Scrolledtext2,self.TCombobox1.get())))
         createToolTip(self.Button1, "Press F5 to run.")
 
         def langselection(e):
