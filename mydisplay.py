@@ -839,6 +839,8 @@ class CodeSharer:
         self.Entry1.bind("<Key-KP_Enter>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
         self.Entry1.bind("<Key-Insert>", (lambda x: send_message(self.Entry1,self.Scrolledtext3)))
 
+        top.bind("<Control-Left>", lambda x: self.Scrolledtext1.focus_set())
+        top.bind("<Control-Right>", lambda x: self.Entry1.focus_set())
 
         self.Label1 = Label(top)
         self.Label1.place(relx=0.52, rely=0.595, height=18, width=99)
@@ -1010,7 +1012,6 @@ class TextLineNumbers(Canvas):
 
     def redraw(self, *args):
         '''redraw line numbers'''
-        print("redrawing")
         self.delete("all")
 
         i = self.textwidget.index("@0,0")

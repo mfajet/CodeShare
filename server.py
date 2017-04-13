@@ -1,5 +1,7 @@
 from socket import *
 import threading
+from threading import Timer
+
 import time
 import sys
 import traceback
@@ -89,13 +91,20 @@ def clientThread(connectionSocket, addr):
                     f.write(data)
             f.close()
             try:
+                output =""
                 p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-                output = p.stdout.read()
+                timer = Timer(10, lambda x: x.kill(), [p])
+                try:
+                    timer.start()
+                    output = p.stdout.read()
+                finally:
+                    timer.cancel()
+                    output="Execution cancelled. Process took too long.".encode()
 
-                if(output.decode() =="" or output.decode()==None):
-                    output="[No output]\n"
+                if(output =="" or output.decode() =="" or output.decode()==None):
+                    output="[No output]\n".encode()
             except:
-                output = "Unexpected error\n"
+                output = "Unexpected error\n".encode()
             i = 0
             while True:
                 data = output[i*1024:(i+1)*1024]
@@ -103,7 +112,10 @@ def clientThread(connectionSocket, addr):
                 if (not data or data == '' or len(data) <= 0):
                     break
                 else:
-                    code_connection.send(data)
+                    try:
+                        code_connection.send(data)
+                    except:
+                        code_connection.send("Unexpected error\n".encode())
             code_connection.close()
 
     except OSError as e:
