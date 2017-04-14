@@ -487,11 +487,13 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
+ctrl_down = False
 def handle_keyboard(event, LineNum):
     LineNum.redraw()
     start = None
     end = None
     input_text = ""
+    print(event.keysym)
     try:
         input_text = str(ord(event.char))
         start = event.widget.index(SEL_FIRST)
@@ -516,7 +518,17 @@ def handle_keyboard(event, LineNum):
 
     broadcast_code(to_send)
     return
+def on_key_press(e, t):
+    char = e.keysym
+    state = e.state
+    ctrl  = (state & 0x4) != 0
 
+    if ctrl and char=="o":
+        load_file(t.EditorTextbox, t.LineNum,t.LanguageSelect)
+        return "break"
+    if ctrl and char=="s":
+        save_file(t.EditorTextbox, t.LanguageSelect.get())
+        return "break"
 def broadcast_notif(to_send):
     global notif_peers
     global notif_socket
@@ -605,7 +617,7 @@ def load_file(code_textbox,linenum,langbox):
         types = (("Haskell files", "*.hs"),("Python files", "*.py"),("All files", "*.*") )
     else:
         types= (("Python files", "*.py"),("Haskell files", "*.hs"),("All files", "*.*") )
-
+    fname = None
     if last_open_dir =="":
         fname = FileDialog.askopenfilename(filetypes=types)
     else:
@@ -628,7 +640,6 @@ def load_file(code_textbox,linenum,langbox):
                 text+=data
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,text)
-
             linenum.redraw()
             if(fname[-3:]==".hs"):
                 lang = "Haskell"
@@ -637,10 +648,13 @@ def load_file(code_textbox,linenum,langbox):
                 lang="Python"
                 langbox.current(1)
             syntax_highlight(lang,code_textbox)
+
         except:
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,"Unable to open file. Press CTRL-Z to undo and return to previous state")
         return
+    else:
+        return "break"
 last_file_name = ""
 last_file_dir = ""
 def save_file(code_textbox,lang):
@@ -667,6 +681,8 @@ def save_file(code_textbox,lang):
         except:
             print("Problem saving file")
         return
+    else:
+        return "break"
 
 def select_all(textbox):
     textbox.tag_add(SEL, "1.0", END)
@@ -761,7 +777,8 @@ class CodeSharer:
         self.LineNum.attach(self.EditorTextbox)
         self.LineNum.redraw()
         self.LineNum.place(x=-30, y=-1.5, relheight=1.1, width=30)
-        self.EditorTextbox.bind("<Key>", lambda e: handle_keyboard(e,self.LineNum))
+        self.EditorTextbox.bind("<KeyRelease>", lambda e: handle_keyboard(e,self.LineNum))
+        self.EditorTextbox.bind("<Key>", lambda e:on_key_press(e, self))
         self.EditorTextbox.bind("<MouseWheel>",self.LineNum.redraw)
         self.EditorTextbox.bind("<Button-4>", self.LineNum.redraw)
         self.EditorTextbox.bind("<Button-5>", self.LineNum.redraw)
