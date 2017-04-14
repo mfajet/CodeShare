@@ -960,6 +960,9 @@ class CodeSharer:
         self.OverlayRoomEntry.configure(background="white")
         self.OverlayRoomEntry.configure(font="TkFixedFont")
         self.OverlayRoomEntry.configure(width=306)
+        self.OverlayRoomEntry.bind("<Key-Return>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
+        self.OverlayRoomEntry.bind("<Key-KP_Enter>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
+        self.OverlayRoomEntry.bind("<Key-Insert>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
 
         self.OverlayJoinButton = Button(self.OverlayRoomPick)
         self.OverlayJoinButton.place(relx=0.47, rely=0.25, height=26, width=65)
