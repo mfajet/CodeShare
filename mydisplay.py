@@ -258,21 +258,25 @@ escaped_chars = {
     "8": ""
 }
 
-
-def handle_peer(codeshare, outputpanel,LineNum ,send=False, loaded=False):
+def exchange_code(codeshare, outputpanel, send=False):
+    global loaded
     if send:
+        print("sending code")
         current = outputpanel.get(1.0, END).strip() or "___null___"
         codeshare.send(current.encode())
-    elif not loaded:
+    elif not loaded or force:
         code = codeshare.recv(1024).decode()
         print("loading code from peers")
         if code != "___null___":
             outputpanel.insert(1.0, code)
 
+def handle_peer(codeshare, outputpanel,LineNum ,send=False):
+    exchange_code(codeshare, outputpanel, send)
+
     while e.isSet():
         try:
-            input_text = codeshare.recv(1024).decode().split()
-
+            rw_input = codeshare.recv(1024).decode()
+            input_text = rw_input.split()
             if not input_text:
                 break
 
@@ -316,6 +320,17 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False, loaded=False):
 
                 outputpanel.delete(start, end)
                 outputpanel.insert(start, str(text))
+            elif command == "replaceall":
+                outputpanel.delete(1.0, END)
+                data = codeshare.recv(1024).decode()
+                while True:
+                    if data.endswith("___EOF___"):
+                        outputpanel.insert(END, data[:-9])
+                        break
+                    outputpanel.insert(END, data)
+                    data = codeshare.recv(1024).decode()
+                    print(data)
+                    
 
             elif command == "delete":
                 outputpanel.delete(index)
@@ -406,7 +421,7 @@ def connect_peers(top):
                 top.OutputTextbox.insert(END, "Connected to peer: " + server + "\n")
                 top.OutputTextbox.configure(state=DISABLED)
 
-                t = threading.Thread(target=handle_peer, args=(peer_socket, top.EditorTextbox, top.LineNum, False, loaded))
+                t = threading.Thread(target=handle_peer, args=(peer_socket, top.EditorTextbox, top.LineNum))
                 t.daemon = True
 
                 t.start()
@@ -580,7 +595,6 @@ last_open_dir=""
 def load_file(code_textbox,linenum,langbox):
     global last_open_dir
     broadcast_notif(username + " is opening a file.")
-
     if langbox.get() == "Haskell":
         types = (("Haskell files", "*.hs"),("Python files", "*.py"),("All files", "*.*") )
     else:
@@ -592,19 +606,23 @@ def load_file(code_textbox,linenum,langbox):
         fname = FileDialog.askopenfilename(filetypes=types, initialdir=last_open_dir)
     if fname:
         text = ""
+        broadcast_code("replaceall 1.0")
         try:
             f = open(fname,"r")
             while True:
-                data = f.read()
+                data = f.read(1024)
                 if (not data or data == '' or len(data) <= 0):
                     f.close()
                     directory_arr = fname.split("/")
                     last_open_dir = "/".join(directory_arr[0:-1])
-                    broadcast_notif(username + " opened " + directory_arr[-1])
+                    broadcast_notif(username + " opened " + directory_arr[-1] )
+                    broadcast_code("___EOF___")
                     break
+                broadcast_code(data)
                 text+=data
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,text)
+           
             linenum.redraw()
             if(fname[-3:]==".hs"):
                 lang = "Haskell"
