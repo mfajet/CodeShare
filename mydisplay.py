@@ -184,6 +184,8 @@ def notif_server(server, top):
                 top.notif_text.configure(state=NORMAL)
                 top.notif_text.delete(1.0, END)
                 top.notif_text.configure(state=DISABLED)
+            elif len(notif.split()) > 1 and notif.split()[1] == "opened":
+                
             else:
                 chat = False
                 top.notif_text.configure(state=NORMAL)
@@ -258,8 +260,8 @@ escaped_chars = {
     "8": ""
 }
 
-
-def handle_peer(codeshare, outputpanel,LineNum ,send=False, loaded=False):
+def load_code(outputpanel, send=False, force=False):
+    global loaded
     if send:
         current = outputpanel.get(1.0, END).strip() or "___null___"
         codeshare.send(current.encode())
@@ -268,6 +270,9 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False, loaded=False):
         print("loading code from peers")
         if code != "___null___":
             outputpanel.insert(1.0, code)
+
+def handle_peer(codeshare, outputpanel,LineNum ,send=False):
+    load_code(outputpanel, send)
 
     while e.isSet():
         try:
@@ -406,7 +411,7 @@ def connect_peers(top):
                 top.Scrolledtext2.insert(END, "Connected to peer: " + server + "\n")
                 top.Scrolledtext2.configure(state=DISABLED)
 
-                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum, False, loaded))
+                t = threading.Thread(target=handle_peer, args=(peer_socket, top.Scrolledtext1, top.LineNum))
                 t.daemon = True
 
                 t.start()
