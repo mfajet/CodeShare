@@ -322,13 +322,16 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
                 outputpanel.insert(start, str(text))
             elif command == "replaceall":
                 outputpanel.delete(1.0, END)
-                outputpanel.insert(END, rw_input.replace("replaceall ", ""))
                 data = codeshare.recv(1024).decode()
-                while data.find("___EOF___") < 0:
+                while True:
+                    if data.endswith("___EOF___"):
+                        outputpanel.insert(END, data[:-9])
+                        break
                     outputpanel.insert(END, data)
                     data = codeshare.recv(1024).decode()
                     print(data)
-                print("end of file")
+                    
+
             elif command == "delete":
                 outputpanel.delete(index)
 
@@ -592,7 +595,6 @@ last_open_dir=""
 def load_file(code_textbox,linenum,langbox):
     global last_open_dir
     broadcast_notif(username + " is opening a file.")
-
     if langbox.get() == "Haskell":
         types = (("Haskell files", "*.hs"),("Python files", "*.py"),("All files", "*.*") )
     else:
@@ -604,6 +606,7 @@ def load_file(code_textbox,linenum,langbox):
         fname = FileDialog.askopenfilename(filetypes=types, initialdir=last_open_dir)
     if fname:
         text = ""
+        broadcast_code("replaceall 1.0")
         try:
             f = open(fname,"r")
             while True:
@@ -615,7 +618,7 @@ def load_file(code_textbox,linenum,langbox):
                     broadcast_notif(username + " opened " + directory_arr[-1] )
                     broadcast_code("___EOF___")
                     break
-                broadcast_code("replaceall "+data)
+                broadcast_code(data)
                 text+=data
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,text)
