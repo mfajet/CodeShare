@@ -307,6 +307,7 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
                 if char_index == -1 and line_index > 1:
                     index = str(line_index - 1)+".end"
                     outputpanel.delete(index)
+                syntax_highlight(display_support.combobox,outputpanel)
 
             elif command == "replace":
                 start = input_text[1]
@@ -320,6 +321,8 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
 
                 outputpanel.delete(start, end)
                 outputpanel.insert(start, str(text))
+                syntax_highlight(display_support.combobox,outputpanel)
+
             elif command == "replaceall":
                 outputpanel.delete(1.0, END)
                 data = codeshare.recv(1024).decode()
@@ -330,10 +333,13 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
                     outputpanel.insert(END, data)
                     data = codeshare.recv(1024).decode()
                     print(data)
-                    
+                syntax_highlight(display_support.combobox,outputpanel)
+
+
 
             elif command == "delete":
                 outputpanel.delete(index)
+                syntax_highlight(display_support.combobox,outputpanel)
 
             else:
                 try:
@@ -622,7 +628,7 @@ def load_file(code_textbox,linenum,langbox):
                 text+=data
             code_textbox.delete(1.0,END)
             code_textbox.insert(END,text)
-           
+
             linenum.redraw()
             if(fname[-3:]==".hs"):
                 lang = "Haskell"
