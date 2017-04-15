@@ -488,7 +488,17 @@ def create_CodeSharer(root, *args, **kwargs):
     return (w, top)
 
 ctrl_down = False
-def handle_keyboard(event, LineNum):
+def handle_keyboard(event, LineNum, t):
+    char = event.keysym
+    state = event.state
+    ctrl  = (state & 0x4) != 0
+
+    if ctrl and char=="o":
+        load_file(t.EditorTextbox, t.LineNum,t.LanguageSelect)
+        return "break"
+    if ctrl and char=="s":
+        save_file(t.EditorTextbox, t.LanguageSelect.get())
+        return "break"
     LineNum.redraw()
     start = None
     end = None
@@ -524,10 +534,8 @@ def on_key_press(e, t):
     ctrl  = (state & 0x4) != 0
 
     if ctrl and char=="o":
-        load_file(t.EditorTextbox, t.LineNum,t.LanguageSelect)
         return "break"
     if ctrl and char=="s":
-        save_file(t.EditorTextbox, t.LanguageSelect.get())
         return "break"
 def broadcast_notif(to_send):
     global notif_peers
@@ -777,8 +785,8 @@ class CodeSharer:
         self.LineNum.attach(self.EditorTextbox)
         self.LineNum.redraw()
         self.LineNum.place(x=-30, y=-1.5, relheight=1.1, width=30)
-        self.EditorTextbox.bind("<KeyRelease>", lambda e: handle_keyboard(e,self.LineNum))
-        self.EditorTextbox.bind("<Key>", lambda e:on_key_press(e, self))
+        self.EditorTextbox.bind("<Key>", lambda e: handle_keyboard(e,self.LineNum,self))
+        # self.EditorTextbox.bind("<KeyRelease>", lambda e:on_key_press(e, self))
         self.EditorTextbox.bind("<MouseWheel>",self.LineNum.redraw)
         self.EditorTextbox.bind("<Button-4>", self.LineNum.redraw)
         self.EditorTextbox.bind("<Button-5>", self.LineNum.redraw)
