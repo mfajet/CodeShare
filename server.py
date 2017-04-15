@@ -100,7 +100,7 @@ def clientThread(connectionSocket, addr):
 
                 finally:
                     if(not timer.isAlive()):
-                        output="Execution cancelled. Process took too long.\n".encode()
+                        output="Execution canceled. Process took too long.\n".encode()
                     timer.cancel()
 
 

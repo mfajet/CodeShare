@@ -76,7 +76,7 @@ def syntax_highlight(lang,codebox):
     t.start()
     tlist.append(t)
 
-def join_room(room, message, top,label):
+def join_room(room, message, top,label, t):
     global peers_list
     global peer_info
     global room_name
@@ -92,10 +92,13 @@ def join_room(room, message, top,label):
         peer_info = potential_list[2]
         room_name = potential_list[1]
         label.insert(END, room_name)
+        t.title("CodeSharer: Room " + room_name)
+
         label.configure(relief=FLAT,  state='readonly')
         peers_list = []
     else:
         label.insert(END, room)
+        t.title("CodeSharer: Room " + room)
         room_name = room
         label.configure(relief=FLAT,  state='readonly')
         peers_list = potential_list
@@ -112,7 +115,7 @@ def join_room(room, message, top,label):
     connect_peers(top)
     message.destroy()
 
-def create_room(message,top,label):
+def create_room(message,top,label, t):
     print("Room will be created")
     global peer_info
     global room_name
@@ -141,6 +144,7 @@ def create_room(message,top,label):
         joinAll()
     print(room_name)
     label.insert(END, room_name)
+    t.title("CodeSharer: Room " + room_name)
     label.configure(relief=FLAT,  state='readonly')
 
     message.destroy()
@@ -698,6 +702,12 @@ def select_all(textbox):
     textbox.see(INSERT)
     return "break"
 
+full = False
+def toggle_fullscreen(t):
+    global full
+    full = not full
+    t.attributes('-fullscreen',full)
+
 
 def change_style(name, lang, box):
     print("Name" + name)
@@ -740,7 +750,7 @@ class CodeSharer:
 
         top.geometry("772x539+503+177")
         top.title("CodeSharer")
-
+        top.bind("<F11>", lambda x: toggle_fullscreen(top))
 
 
         global room_name
@@ -877,6 +887,8 @@ class CodeSharer:
         self.OutputTextbox.configure(wrap=CHAR)
         self.OutputTextbox.insert(END, '''Output will show up here\n''')
         self.OutputTextbox.configure(state=DISABLED)
+        self.OutputTextbox.bind("<1>", lambda event: self.OutputTextbox.focus_set())
+        self.OutputTextbox.configure(highlightthickness="0")
 
         self.ChatMessagesTextbox = ScrolledText(top)
         self.ChatMessagesTextbox.place(relx=0.52, rely=0.63, relheight=0.26
@@ -884,6 +896,7 @@ class CodeSharer:
         self.ChatMessagesTextbox.configure(background="white")
         self.ChatMessagesTextbox.configure(font="TkTextFont")
         self.ChatMessagesTextbox.configure(insertborderwidth="3")
+        self.ChatMessagesTextbox.configure(highlightthickness="0")
         self.ChatMessagesTextbox.configure(selectbackground="#c4c4c4")
         self.ChatMessagesTextbox.configure(undo="1")
         self.ChatMessagesTextbox.configure(width=10)
@@ -891,6 +904,8 @@ class CodeSharer:
         self.ChatMessagesTextbox.tag_configure("right", justify="right")
         self.ChatMessagesTextbox.tag_configure("left", justify="left")
         self.ChatMessagesTextbox.configure(state=DISABLED)
+        self.ChatMessagesTextbox.bind("<1>", lambda event: self.ChatMessagesTextbox.focus_set())
+
 
         self.SendButton = Button(top)
         self.SendButton.place(relx=0.92, rely=0.89, relheight=0.05, relwidth=.08)
@@ -916,11 +931,11 @@ class CodeSharer:
         self.ChatLabel.configure(text='''Chat with peers''')
 
         self.ClearButton = Button(top)
-        self.ClearButton.place(relx=0.79, rely=0.595, height=18, width=50)
+        self.ClearButton.place(relx=1, rely=0.595, height=18, width=50, anchor="ne")
         self.ClearButton.configure(activebackground="#d9d9d9")
         self.ClearButton.configure(command=(lambda : clear_output(self.OutputTextbox)))
         self.ClearButton.configure(text="""Clear""")
-        createToolTip(self.ClearButton, "Clear all code output.")
+        createToolTip(self.ClearButton, "Clear all code output. (ctrl-l)")
 
         top.bind("<Control-l>", lambda x : clear_output(self.OutputTextbox))
         # self.NotificationsLabel = Label(top)
@@ -932,7 +947,7 @@ class CodeSharer:
         self.OpenButton.configure(activebackground="#d9d9d9")
         self.OpenButton.configure(text='''Open''')
         self.OpenButton.configure(command=(lambda: load_file(self.EditorTextbox, self.LineNum,self.LanguageSelect)))
-        createToolTip(self.OpenButton, "Open a file.")
+        createToolTip(self.OpenButton, "Open a file. (ctrl-o)")
         top.bind("<Control-o>", lambda x: load_file(self.EditorTextbox, self.LineNum,self.LanguageSelect))
 
         self.SaveButton = Button(top)
@@ -940,7 +955,7 @@ class CodeSharer:
         self.SaveButton.configure(activebackground="#d9d9d9")
         self.SaveButton.configure(text='''Save''')
         self.SaveButton.configure(command=(lambda:  save_file(self.EditorTextbox, self.LanguageSelect.get())))
-        createToolTip(self.SaveButton, "Save your code to a file.")
+        createToolTip(self.SaveButton, "Save your code to a file. (ctrl-s)")
         top.bind("<Control-s>", lambda x: save_file(self.EditorTextbox, self.LanguageSelect.get()))
 
 
@@ -968,15 +983,15 @@ class CodeSharer:
         self.OverlayRoomEntry.configure(background="white")
         self.OverlayRoomEntry.configure(font="TkFixedFont")
         self.OverlayRoomEntry.configure(width=306)
-        self.OverlayRoomEntry.bind("<Key-Return>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
-        self.OverlayRoomEntry.bind("<Key-KP_Enter>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
-        self.OverlayRoomEntry.bind("<Key-Insert>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
+        self.OverlayRoomEntry.bind("<Key-Return>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel, top)))
+        self.OverlayRoomEntry.bind("<Key-KP_Enter>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel, top)))
+        self.OverlayRoomEntry.bind("<Key-Insert>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel, top)))
 
         self.OverlayJoinButton = Button(self.OverlayRoomPick)
         self.OverlayJoinButton.place(relx=0.47, rely=0.25, height=26, width=65)
         self.OverlayJoinButton.configure(activebackground="#d9d9d9")
         self.OverlayJoinButton.configure(text='''Join''')
-        self.OverlayJoinButton.configure(command=(lambda : join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel)))
+        self.OverlayJoinButton.configure(command=(lambda : join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel, top)))
 
 
         self.OverlayCreateLabel = Label(self.OverlayRoomPick)
@@ -989,7 +1004,7 @@ class CodeSharer:
         self.OverlayCreateButton.place(relx=0.47, rely=0.42, height=26, width=65)
         self.OverlayCreateButton.configure(activebackground="#d9d9d9")
         self.OverlayCreateButton.configure(text='''Create''')
-        self.OverlayCreateButton.configure(command=(lambda: create_room(self.OverlayRoomPick, self, self.RoomLabel)))
+        self.OverlayCreateButton.configure(command=(lambda: create_room(self.OverlayRoomPick, self, self.RoomLabel, top)))
 
 
 
