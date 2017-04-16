@@ -1,7 +1,16 @@
 # CodeShare
 
 ## About this project
-Yet another code sharing application. Creating this as a school project.
+A code sharing application. Creating this as a school project.
+It includes the following features:
+* code synchronization with peers_list
+* Chatting with peers
+* Notifications on what peers are doing
+* Open files
+* Save files
+* Execute code
+* Syntax highlighting with styles you can choose from
+* Rooms that you can create and join to be with peers
 
 The frontend was created with tkinter and ttk by using PAGE (Python Automatic GUI Generator) initially which can be found at http://page.sourceforge.net/
 After that, the frontend was done using tkinter without bothering with PAGE
