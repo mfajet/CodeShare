@@ -298,7 +298,6 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
                 break
 
             index = input_text[1]
-            LineNum.redraw()
             if command == "backspace":
                 index_ar = index.split(".")
                 line_index = int(index_ar[0])
@@ -359,6 +358,7 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
 
                 except IndexError:
                     print("not a character")
+            LineNum.redraw()
 
         except OSError:
             break
@@ -491,7 +491,6 @@ def create_CodeSharer(root, *args, **kwargs):
     display_support.init(w, top, *args, **kwargs)
     return (w, top)
 
-ctrl_down = False
 def handle_keyboard(event, LineNum, t):
     char = event.keysym
     state = event.state
@@ -500,8 +499,10 @@ def handle_keyboard(event, LineNum, t):
     if ctrl and char=="o":
         load_file(t.EditorTextbox, t.LineNum,t.LanguageSelect)
         return "break"
-    if ctrl and char=="s":
+    elif ctrl and char=="s":
         save_file(t.EditorTextbox, t.LanguageSelect.get())
+        return "break"
+    elif ctrl and not (char=="o" or char=="s" or char=="Left" or char=="Right" or char=="l"):
         return "break"
     LineNum.redraw()
     start = None
@@ -517,7 +518,7 @@ def handle_keyboard(event, LineNum, t):
     except TclError:
         print("nothing is selected")
     index = event.widget.index(INSERT)
-    broadcast_notif(username + " is modifying the code at " + index)
+    broadcast_notif(username + " is modifying the code at line " + index.split(".")[0])
     try:
         char = chr(int(input_text))
         if char==' ' or char =='\n' or char == '\r' or char =='\t'  or char=='(' or char =='\'' or char =='"':
@@ -532,15 +533,7 @@ def handle_keyboard(event, LineNum, t):
 
     broadcast_code(to_send)
     return
-def on_key_press(e, t):
-    char = e.keysym
-    state = e.state
-    ctrl  = (state & 0x4) != 0
 
-    if ctrl and char=="o":
-        return "break"
-    if ctrl and char=="s":
-        return "break"
 def broadcast_notif(to_send):
     global notif_peers
     global notif_socket
@@ -657,7 +650,7 @@ def load_file(code_textbox,linenum,langbox):
                 lang = "Haskell"
                 langbox.current(2)
             else:
-                lang="Python"
+                lang = "Python"
                 langbox.current(1)
             syntax_highlight(lang,code_textbox)
 
@@ -851,7 +844,7 @@ class CodeSharer:
         self.RunButton = Button(top)
         self.RunButton.place(relx=0.79, rely=0.01, height=26, width=50)
         self.RunButton.configure(activebackground="#d9d9d9")
-        self.RunButton.configure(command=(lambda : run_code_wrapper(self.EditorTextbox, self.OutputTextbox,display_support.combobox)))
+        self.RunButton.configure(command=(lambda : run_code_wrapper(self.EditorTextbox, self.OutputTextbox,self.LanguageSelect.get())))
         self.RunButton.configure(text="""Run""")
         top.bind("<F5>",(lambda x : run_code_wrapper(self.EditorTextbox, self.OutputTextbox,self.LanguageSelect.get())))
         createToolTip(self.RunButton, "Press F5 to run.")
@@ -938,6 +931,7 @@ class CodeSharer:
         createToolTip(self.ClearButton, "Clear all code output. (ctrl-l)")
 
         top.bind("<Control-l>", lambda x : clear_output(self.OutputTextbox))
+        self.EditorTextbox.bind("<Control-l>", lambda x : clear_output(self.OutputTextbox))
         # self.NotificationsLabel = Label(top)
         # self.NotificationsLabel.place(relx=0.70, rely=0.595, height=18, width=99)
         # self.NotificationsLabel.configure(text='''Notifications''')
@@ -968,18 +962,18 @@ class CodeSharer:
         self.OverlayRoomPick.configure(width=773)
 
         self.OverlayRoomLabel = Label(self.OverlayRoomPick)
-        self.OverlayRoomLabel.place(relx=0.37, rely=0.20, height=28, width=50)
+        self.OverlayRoomLabel.place(relx=0.375, rely=0.20, height=28, width=50, anchor="e")
         self.OverlayRoomLabel.configure(activebackground="#f9f9f9")
         self.OverlayRoomLabel.configure(text='''Room #''')
 
         self.OverlayJoinRoomLabel = Label(self.OverlayRoomPick)
-        self.OverlayJoinRoomLabel.place(relx=0.38, rely=0.15, height=28, width=206)
+        self.OverlayJoinRoomLabel.place(relx=0.5, rely=0.15, height=28, width=206, anchor="c")
         self.OverlayJoinRoomLabel.configure(activebackground="#f9f9f9")
         self.OverlayJoinRoomLabel.configure(font=font11)
         self.OverlayJoinRoomLabel.configure(text='''Join an existing room''')
 
         self.OverlayRoomEntry = Entry(self.OverlayRoomPick)
-        self.OverlayRoomEntry.place(relx=0.42, rely=0.20, relheight=0.05, relwidth=0.25)
+        self.OverlayRoomEntry.place(relx=0.375, rely=0.20, relheight=0.05, relwidth=0.25, anchor="w")
         self.OverlayRoomEntry.configure(background="white")
         self.OverlayRoomEntry.configure(font="TkFixedFont")
         self.OverlayRoomEntry.configure(width=306)
@@ -988,20 +982,20 @@ class CodeSharer:
         self.OverlayRoomEntry.bind("<Key-Insert>", (lambda x: join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel, top)))
 
         self.OverlayJoinButton = Button(self.OverlayRoomPick)
-        self.OverlayJoinButton.place(relx=0.47, rely=0.25, height=26, width=65)
+        self.OverlayJoinButton.place(relx=0.5, rely=0.25, height=26, width=65, anchor="c")
         self.OverlayJoinButton.configure(activebackground="#d9d9d9")
         self.OverlayJoinButton.configure(text='''Join''')
         self.OverlayJoinButton.configure(command=(lambda : join_room(self.OverlayRoomEntry.get(), self.OverlayRoomPick, self, self.RoomLabel, top)))
 
 
         self.OverlayCreateLabel = Label(self.OverlayRoomPick)
-        self.OverlayCreateLabel.place(relx=0.38, rely=0.33, height=28, width=206)
+        self.OverlayCreateLabel.place(relx=0.5, rely=0.33, height=28, width=206, anchor="c")
         self.OverlayCreateLabel.configure(activebackground="#f9f9f9")
         self.OverlayCreateLabel.configure(font=font11)
         self.OverlayCreateLabel.configure(text='''Create a new room''')
 
         self.OverlayCreateButton = Button(self.OverlayRoomPick)
-        self.OverlayCreateButton.place(relx=0.47, rely=0.42, height=26, width=65)
+        self.OverlayCreateButton.place(relx=0.5, rely=0.42, height=26, width=65, anchor="c")
         self.OverlayCreateButton.configure(activebackground="#d9d9d9")
         self.OverlayCreateButton.configure(text='''Create''')
         self.OverlayCreateButton.configure(command=(lambda: create_room(self.OverlayRoomPick, self, self.RoomLabel, top)))
