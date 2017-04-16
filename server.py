@@ -1,7 +1,7 @@
 from socket import *
 import threading
 from threading import Timer
-
+import uuid
 import time
 import sys
 import traceback
@@ -56,19 +56,22 @@ def clientThread(connectionSocket, addr):
             print(peers_list)
         while True:
             global code_num
-            f = open("tempFile",'w')
+
             # print("inside while loop")
             msg = connectionSocket.recv(1024).decode()
+            fname = str(uuid.uuid4())
+            f = open(fname,'w')
             if msg == "___end___":
                 room_list_dict[room_name].remove(peer)
                 print(room_list_dict[room_name])
+                os.remove(fname)
                 break
             elif msg[0:7] == "python3":
-                cmd = 'python3 tempFile'
+                cmd = 'python3 ' + fname
             elif msg[0:7] == "python2":
-                cmd = 'python tempFile'
+                cmd = 'python ' +  fname
             elif msg[0:7].lower() =="haskell":
-                cmd= 'runhaskell tempFile'
+                cmd= 'runhaskell ' + fname
             else:
                 connectionSocket.send("Unknown language".encode())
                 continue
@@ -109,6 +112,7 @@ def clientThread(connectionSocket, addr):
             except:
                 output = "Unexpected error\n".encode()
             i = 0
+            output = output.decode().replace(fname,"Your program").encode()
             while True:
                 data = output[i*1024:(i+1)*1024]
                 i+=1
@@ -120,6 +124,7 @@ def clientThread(connectionSocket, addr):
                     except:
                         code_connection.send("Unexpected error\n".encode())
             code_connection.close()
+            os.remove(fname)
 
     except OSError as e:
         # A socket error
