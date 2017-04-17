@@ -20,7 +20,7 @@ In order to run the project, make sure to have the following installed
 * Python
 * tkinter (sudo apt-get install python3-tk)
 * ttk (included in tkinter if using python3)
-* pygments (sudo apt-get install python3-pygments)
+* pygments (sudo apt-get install python3-pygments) or sudo pip3 install Pygments (Macs)
 * ghci (sudo apt-get install haskell-platform)
 The haskell platform is only necessary if you want to run haskell code.
 

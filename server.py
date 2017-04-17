@@ -63,14 +63,14 @@ def clientThread(connectionSocket, addr):
 
             # print("inside while loop")
             msg = connectionSocket.recv(1024).decode()
-            fname = str(uuid.uuid4())
-            f = open(fname,'w')
+
             if msg == "___end___":
                 room_list_dict[room_name].remove(peer)
                 print(room_list_dict[room_name])
-                os.remove(fname)
                 break
-            elif msg[0:7] == "python3":
+            fname = str(uuid.uuid4())
+            f = open(fname,'w')
+            if msg[0:7] == "python3":
                 cmd = 'python3 ' + fname
             elif msg[0:7] == "python2":
                 cmd = 'python ' +  fname
@@ -79,6 +79,7 @@ def clientThread(connectionSocket, addr):
             else:
                 connectionSocket.send("Unknown language".encode())
                 continue
+
             code_socket = socket(AF_INET, SOCK_STREAM)
             # reuse port
             code_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -132,10 +133,11 @@ def clientThread(connectionSocket, addr):
             os.remove(fname)
 
     except OSError as e:
-        # A socket error
+        try:
+            os.remove(fname)
+        except:
+            pass
         print("Socket error:",e)
-    except IndexError:
-        print("index error", )
 
 
 def joinAll():
