@@ -132,7 +132,6 @@ def clientThread(connectionSocket, addr):
             os.remove(fname)
 
     except OSError as e:
-        # A socket error
         try:
             os.remove(fname)
         except:
