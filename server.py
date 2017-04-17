@@ -10,6 +10,8 @@ from subprocess import Popen, PIPE, STDOUT
 import os
 import string
 import random
+import config
+
 ## global variables
 tList = []
 chat_rooms = []
@@ -19,7 +21,7 @@ room_list_dict = {}
 choose_from = string.ascii_letters + "0123456789"
 peer_num = 0
 code_num = 0
-server_addr = "192.168.1.138"
+
 
 def unique_name():
     str = ""
@@ -28,7 +30,6 @@ def unique_name():
     return str
 
 def clientThread(connectionSocket, addr):
-    global server_addr    
     peer = None
     global peer_num
     room_name = None
@@ -82,9 +83,9 @@ def clientThread(connectionSocket, addr):
             # reuse port
             code_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
-            code_socket.bind((server_addr, base_code_port + code_num))
+            code_socket.bind((config.server_addr, base_code_port + code_num))
             code_socket.listen(15)
-            connectionSocket.send((server_addr + " " + str(base_code_port + code_num) ).encode())
+            connectionSocket.send((config.server_addr + " " + str(base_code_port + code_num) ).encode())
             code_num +=1
             code_connection, code_host = code_socket.accept()
             f.write(msg[8:])
@@ -140,13 +141,12 @@ def joinAll():
         t.join()
 
 def main():
-    global server_addr
     try:
         global tList
         serverPort = 2110
         serverSocket = socket(AF_INET,SOCK_STREAM)
         serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        serverSocket.bind((server_addr,serverPort))
+        serverSocket.bind((config.server_addr,serverPort))
         serverSocket.listen(15)
         print('The server is ready to receive')
 
