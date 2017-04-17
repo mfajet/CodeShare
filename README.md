@@ -3,7 +3,7 @@
 ## About this project
 A code sharing application. Creating this as a school project.
 It includes the following features:
-* code synchronization with peers_list
+* code synchronization with peers
 * Chatting with peers
 * Notifications on what peers are doing
 * Open files
@@ -62,7 +62,7 @@ To test out this security measure, one can type in the editor:
 while True:
     print("If this runs forever, your server sucks.")
 ```
-Click run or press F5 and you will see the response "Execution canceled. Process took too long." as long as the language is set to python 2 or 3.
+Click run or press F5 and you will see the response "Execution canceled. Process took too long." as long as the language is set to python 2 or 3. (Otherwise it simply isn't valid code and will produce an error message).
 
 
 To open a file, click open or press ctrl-o, you can select any file from your file system.

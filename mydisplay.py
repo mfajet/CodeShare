@@ -9,7 +9,7 @@ from pygments.styles import get_style_by_name
 from pygments import lex
 from pygments.lexers import PythonLexer
 from pygments.lexers import HaskellLexer
-
+import time
 try:
     from Tkinter import *
 except ImportError:
@@ -552,11 +552,15 @@ def broadcast(to_send):
         message = username + "___space___" + to_send
         conn.send(message.encode())
 
+last_call_time = time.time()
 def run_code_wrapper(code, outputLabel, language):
-    t = threading.Thread(target=run_code, args=(code, outputLabel, language))
-    t.daemon = True
-    t.start()
-    tlist.append(t)
+    global last_call_time
+    if time.time() - last_call_time >=1:
+        last_call_time = time.time()
+        t = threading.Thread(target=run_code, args=(code, outputLabel, language))
+        t.daemon = True
+        t.start()
+        tlist.append(t)
 
 def run_code(c, outputLabel, language):
     code = c.get(1.0, END)
