@@ -10,6 +10,8 @@ from pygments import lex
 from pygments.lexers import PythonLexer
 from pygments.lexers import HaskellLexer
 import time
+import config
+
 try:
     from Tkinter import *
 except ImportError:
@@ -32,15 +34,13 @@ import mydisplay_support as display_support
 from tooltip import *
 from socket import *
 
-serverName = "192.168.1.103"
-serverPort = 2110
 peer_connections = []
 chat_connections = []
 notif_peers = []
 tlist = []
 clientSocket = socket(AF_INET,SOCK_STREAM)
-clientSocket.connect((serverName,serverPort))
-server_addr, port = clientSocket.getsockname()
+clientSocket.connect((config.server_addr, config.server_port))
+client_addr, port = clientSocket.getsockname()
 peers_list = []
 e = threading.Event()
 e.set()
@@ -49,17 +49,17 @@ peer_info=""
 is_host = False
 peer_socket = socket(AF_INET,SOCK_STREAM)
 peer_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-peer_socket.bind((server_addr, 0))
-peer_socket.listen(5)    
+peer_socket.bind((client_addr, 0))
+peer_socket.listen(5)
 notif_socket = socket(AF_INET, SOCK_DGRAM)
 notif_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-notif_socket.bind((server_addr, 0))
-server_addr, notif_port = notif_socket.getsockname()
-server_addr, peer_port  = peer_socket.getsockname()     
+notif_socket.bind((client_addr, 0))
+client_addr, notif_port = notif_socket.getsockname()
+client_addr, peer_port  = peer_socket.getsockname()
 username = gethostname()
 loaded = False
 
-print(server_addr, notif_port)
+print(client_addr, notif_port)
 
 
 def syntax_highlight(lang,codebox):
@@ -86,10 +86,10 @@ def join_room(room, message, top,label, t):
     global peer_info
     global room_name
     global notif_port
-    global peer_port    
+    global peer_port
     global peer_socket
     global notif_socket
-    global server_addr
+    global client_addr
 
     if room=="":
         return
@@ -110,7 +110,7 @@ def join_room(room, message, top,label, t):
         label.configure(relief=FLAT,  state='readonly')
         peers_list = potential_list
         # peer_info = peers_list[0]
-        peers_list.pop(0)    
+        peers_list.pop(0)
     try:
         start_server(peer_socket, notif_socket, top)
     except OSError:
@@ -400,9 +400,9 @@ def handle_close():
 
 def stop_server():
     global peer_port
-    global server_addr
+    global client_addr
     closing = socket(AF_INET,SOCK_STREAM)
-    closing.connect((server_addr, peer_port))
+    closing.connect((client_addr, peer_port))
     closing.send("___stop___".encode())
     closing.close()
 
