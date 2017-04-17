@@ -170,11 +170,11 @@ def notif_server(server, top):
         try:
             buffer, addr = server.recvfrom(1024)
             notif = buffer.decode()
-            if notif[0:10] == "___stop___":
-                server.sendto("___stop___", addr)
+            if notif[0:9] == "___end___":
+                server.sendto("___end___", addr)
                 notif_peers.remove(addr)
                 break
-
+            
             if notif == "___addr___":
                 notif_peers.append(addr)
 
