@@ -170,7 +170,6 @@ def notif_server(server, top):
         try:
             buffer, addr = server.recvfrom(1024)
             notif = buffer.decode()
-            print(notif)
             if notif[0:10] == "___stop___":
                 server.sendto("___stop___", addr)
                 notif_peers.remove(addr)
@@ -279,21 +278,24 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
         try:
             rw_input = codeshare.recv(1024).decode()
             input_text = rw_input.split()
+            command = input_text[0].lower()
+            
             if not input_text:
                 break
-
-            if len(input_text) < 2:
-                continue
-
-            command = input_text[0].lower()
-            print(input_text)
-
+            
             if command == "___end___":
                 peer_connections.remove(codeshare)
                 codeshare.settimeout(1)
                 codeshare.send("___end___".encode())
                 print("ending connection")
                 break
+            
+            if len(input_text) < 2:
+                continue
+
+            print(input_text)
+
+       
 
             index = input_text[1]
             if command == "backspace":
@@ -537,19 +539,28 @@ def broadcast_notif(to_send):
     global notif_peers
     global notif_socket
     for addr in notif_peers:
-        notif_socket.sendto(to_send.encode(), addr)
+        try:
+            notif_socket.sendto(to_send.encode(), addr)
+        except OSError as e:
+            print("peer notification connection error", e)
 
 
 def broadcast_code(to_send):
     for conn in peer_connections:
-        conn.send(to_send.encode())
+        try:
+            conn.send(to_send.encode())
+        except OSError as e:
+            print("peer connection error",e)
 
 def broadcast(to_send):
     global username
     for conn in chat_connections:
         # TODO: change hostname by username
-        message = username + "___space___" + to_send
-        conn.send(message.encode())
+        try:
+            message = username + "___space___" + to_send
+            conn.send(message.encode())
+        except OSError as e:
+            print("chat peer connection error", e)
 
 last_call_time = time.time()
 def run_code_wrapper(code, outputLabel, language):

@@ -99,12 +99,13 @@ def clientThread(connectionSocket, addr):
             f.close()
             try:
                 output =""
-                p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-                timer = Timer(10, lambda x: x.kill(), [p])
+                p = Popen("exec "+cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+                timer = Timer(10.0, lambda x: x.kill(), [p])
                 try:
                     timer.start()
                     output = p.stdout.read()
-
+                except Exception as e:
+                    print(e)
                 finally:
                     if(not timer.isAlive()):
                         output="Execution canceled. Process took too long.\n".encode()
