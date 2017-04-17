@@ -132,7 +132,9 @@ def clientThread(connectionSocket, addr):
 
     except OSError as e:
         # A socket error
-          print("Socket error:",e)
+        print("Socket error:",e)
+    except IndexError:
+        print("index error", )
 
 
 def joinAll():

@@ -234,6 +234,7 @@ def client_server(server, top):
 
 def handle_chat(chat, outputpanel):
     global username
+    global chat_connections
     while e.isSet():
         try:
             message_ar = chat.recv(1024).decode().split("___space___")
@@ -271,6 +272,7 @@ def exchange_code(codeshare, outputpanel, send=False):
             outputpanel.insert(1.0, code)
 
 def handle_peer(codeshare, outputpanel,LineNum ,send=False):
+    global peer_connections
     exchange_code(codeshare, outputpanel, send)
 
     while e.isSet():
