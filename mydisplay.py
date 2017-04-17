@@ -32,7 +32,7 @@ import mydisplay_support as display_support
 from tooltip import *
 from socket import *
 
-serverName = "127.0.0.1"
+serverName = "192.168.1.103"
 serverPort = 2110
 peer_connections = []
 chat_connections = []
@@ -40,21 +40,26 @@ notif_peers = []
 tlist = []
 clientSocket = socket(AF_INET,SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
+server_addr, port = clientSocket.getsockname()
 peers_list = []
 e = threading.Event()
 e.set()
 room_name = ""
 peer_info=""
-notif_port = None
-client_port = None
 is_host = False
 peer_socket = socket(AF_INET,SOCK_STREAM)
 peer_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+peer_socket.bind((server_addr, 0))
+peer_socket.listen(5)    
 notif_socket = socket(AF_INET, SOCK_DGRAM)
 notif_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-notif_socket.bind((serverName, 0))
+notif_socket.bind((server_addr, 0))
+server_addr, notif_port = notif_socket.getsockname()
+server_addr, peer_port  = peer_socket.getsockname()     
 username = gethostname()
 loaded = False
+
+print(server_addr, notif_port)
 
 
 def syntax_highlight(lang,codebox):
@@ -81,19 +86,21 @@ def join_room(room, message, top,label, t):
     global peer_info
     global room_name
     global notif_port
+    global peer_port    
     global peer_socket
     global notif_socket
+    global server_addr
+
     if room=="":
         return
-    server_addr, notif_port = notif_socket.getsockname()
-    clientSocket.send((room + " " + str(notif_port)).encode())
+
+    clientSocket.send((room + " " + str(peer_port) + " " + str(notif_port)).encode())
     potential_list = clientSocket.recv(1024).decode().split()
     if potential_list[0] == "___newroom___":
-        peer_info = potential_list[2]
+        # peer_info = potential_list[2]
         room_name = potential_list[1]
         label.insert(END, room_name)
         t.title("CodeSharer: Room " + room_name)
-
         label.configure(relief=FLAT,  state='readonly')
         peers_list = []
     else:
@@ -102,11 +109,8 @@ def join_room(room, message, top,label, t):
         room_name = room
         label.configure(relief=FLAT,  state='readonly')
         peers_list = potential_list
-        peer_info = peers_list[0]
-        peers_list.remove(peer_info)
-    client_port = int(peer_info.split(",")[1])
-    peer_socket.bind((serverName, client_port))
-    peer_socket.listen(5)
+        # peer_info = peers_list[0]
+        peers_list.pop(0)    
     try:
         start_server(peer_socket, notif_socket, top)
     except OSError:
@@ -119,25 +123,17 @@ def create_room(message,top,label, t):
     print("Room will be created")
     global peer_info
     global room_name
-    global client_port
+    global peer_port
     global is_host
     global notif_port
     global notif_socket
     global peer_socket
 
-    server_addr, notif_port = notif_socket.getsockname()
-    print(server_addr, notif_port)
-
-    clientSocket.send(("___newroom___ " + str(notif_port)).encode())
+    clientSocket.send(("___newroom___ " + str(peer_port) + " " +str(notif_port)).encode())
 
     reply = clientSocket.recv(1024).decode().split()
     room_name = reply[1]
-    peer_info = reply[2]
-    client_port = int(peer_info.split(",")[1])
-    peer_socket.bind((serverName, client_port))
-    peer_socket.listen(5)
     is_host = True
-
     try:
         start_server(peer_socket, notif_socket, top)
     except OSError:
@@ -403,9 +399,10 @@ def handle_close():
 
 
 def stop_server():
-    global client_port
+    global peer_port
+    global server_addr
     closing = socket(AF_INET,SOCK_STREAM)
-    closing.connect(("", client_port))
+    closing.connect((server_addr, peer_port))
     closing.send("___stop___".encode())
     closing.close()
 
