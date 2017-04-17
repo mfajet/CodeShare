@@ -35,9 +35,10 @@ def clientThread(connectionSocket, addr):
         host, sock = addr
         msg = connectionSocket.recv(1024).decode().split()
         room_name = msg[0]
-        notif_port = msg[1]
+        peer_port = msg[1]
+        notif_port = msg[2]
         peer_num +=1
-        peer = host + "," + str(peer_base_port + peer_num) + "," + notif_port
+        peer = host + "," + peer_port + "," + notif_port
 
         print(peer)
 
@@ -142,7 +143,7 @@ def main():
         serverPort = 2110
         serverSocket = socket(AF_INET,SOCK_STREAM)
         serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        serverSocket.bind(('127.0.0.1',serverPort))
+        serverSocket.bind(("192.168.1.138",serverPort))
         serverSocket.listen(15)
         print('The server is ready to receive')
 
