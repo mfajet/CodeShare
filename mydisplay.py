@@ -471,8 +471,11 @@ def vp_start_gui():
     except TclError:
         pass
     # now set the magic variables accordingly
-    root.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
-    root.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+    try:
+        root.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
+        root.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+    except TclError:
+        pass
     #####################################################
 
 
