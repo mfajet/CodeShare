@@ -143,10 +143,9 @@ def joinAll():
 def main():
     try:
         global tList
-        serverPort = 2110
         serverSocket = socket(AF_INET,SOCK_STREAM)
         serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        serverSocket.bind((config.server_addr,serverPort))
+        serverSocket.bind((config.server_addr, config.server_port))
         serverSocket.listen(15)
         print('The server is ready to receive')
 
