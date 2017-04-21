@@ -171,10 +171,10 @@ def notif_server(server, top):
             buffer, addr = server.recvfrom(1024)
             notif = buffer.decode()
             if notif[0:9] == "___end___":
-                server.sendto("___end___", addr)
+                server.sendto("___end___", addr.encode())
                 notif_peers.remove(addr)
                 break
-            
+
             if notif == "___addr___":
                 notif_peers.append(addr)
 
@@ -209,18 +209,20 @@ def client_server(server, top):
                 connection.close()
                 connection = None
                 break
-
-            if message == "___peer___":
+            print(message.split())
+            if message.split()[0] == "___peer___":
                 t = threading.Thread(target=handle_peer, args=(connection, top.EditorTextbox, top.LineNum, True))
+                connection.send(username.encode())
                 top.OutputTextbox.configure(state=NORMAL)
-                top.OutputTextbox.insert(END, "Connection accepted from: " + str(addr) + "\n")
+                top.OutputTextbox.insert(END, "Connection accepted from: " + message.split()[1] + "\n")
                 top.OutputTextbox.configure(state=DISABLED)
                 peer_connections.append(connection)
-            elif message == "___chat___":
+            elif message.split()[0] == "___chat___":
                 chat_connections.append(connection)
+                connection.send(username.encode())
                 t = threading.Thread(target=handle_chat, args=(connection, top.ChatMessagesTextbox))
                 top.ChatMessagesTextbox.configure(state=NORMAL)
-                top.ChatMessagesTextbox.insert(END, str(addr) + " has joined\n", "left")
+                top.ChatMessagesTextbox.insert(END, message.split()[1] + " has joined\n", "left")
                 top.ChatMessagesTextbox.configure(state=DISABLED)
             t.daemon = True
             t.start()
@@ -279,23 +281,23 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
             rw_input = codeshare.recv(1024).decode()
             input_text = rw_input.split()
             command = input_text[0].lower()
-            
+
             if not input_text:
                 break
-            
+
             if command == "___end___":
                 peer_connections.remove(codeshare)
                 codeshare.settimeout(1)
                 codeshare.send("___end___".encode())
                 print("ending connection")
                 break
-            
+
             if len(input_text) < 2:
                 continue
 
             print(input_text)
 
-       
+
 
             index = input_text[1]
             if command == "backspace":
@@ -426,10 +428,11 @@ def connect_peers(top):
                 notif_port = int(peer.split(",")[2])
                 peer_socket = socket(AF_INET,SOCK_STREAM)
                 peer_socket.connect((server,peer_port))
-                peer_socket.send("___peer___".encode())
+                peer_socket.send(("___peer___ " + username).encode())
+                name_of_peer = peer_socket.recv(1024).decode()
 
                 top.OutputTextbox.configure(state=NORMAL)
-                top.OutputTextbox.insert(END, "Connected to peer: " + server + "\n")
+                top.OutputTextbox.insert(END, "Connected to peer: " + name_of_peer + "\n")
                 top.OutputTextbox.configure(state=DISABLED)
 
                 t = threading.Thread(target=handle_peer, args=(peer_socket, top.EditorTextbox, top.LineNum))
@@ -440,7 +443,8 @@ def connect_peers(top):
 
                 chat_socket = socket(AF_INET, SOCK_STREAM)
                 chat_socket.connect((server,peer_port))
-                chat_socket.send("___chat___".encode())
+                chat_socket.send(("___chat___ " + username).encode())
+                name_of_peer = chat_socket.recv(1024).decode()
 
                 t1 = threading.Thread(target=handle_chat, args=(chat_socket, top.ChatMessagesTextbox))
                 t1.daemon = True
@@ -448,7 +452,7 @@ def connect_peers(top):
                 tlist.append(t1)
 
                 top.ChatMessagesTextbox.configure(state=NORMAL)
-                top.ChatMessagesTextbox.insert(END, "Connected to peer: " + server + "\n", "right")
+                top.ChatMessagesTextbox.insert(END, "Connected to peer: " + name_of_peer + "\n", "right")
                 top.ChatMessagesTextbox.configure(state=DISABLED)
 
                 peer_connections.append(peer_socket)
