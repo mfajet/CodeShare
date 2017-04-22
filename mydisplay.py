@@ -171,7 +171,7 @@ def notif_server(server, top):
             buffer, addr = server.recvfrom(1024)
             notif = buffer.decode()
             if notif[0:9] == "___end___":
-                server.sendto("___end___", addr.encode())
+                server.sendto("___end___", str(addr).encode())
                 notif_peers.remove(addr)
                 break
 
@@ -297,70 +297,86 @@ def handle_peer(codeshare, outputpanel,LineNum ,send=False):
 
             print(input_text)
 
+            i = 0
+            while i < len(input_text):
+                command = input_text[i].lower()
 
+                index = input_text[i + 1]
+                if command == "backspace":
+                    index_ar = index.split(".")
+                    line_index = int(index_ar[0])
+                    char_index = int(index_ar[1]) - 1
+                    index_ar[1] = str(char_index)
+                    index = ".".join(index_ar)
+                    if char_index >= 0:
+                        outputpanel.delete(index)
+                    # backspace reached the beginning of the line, move the line up
+                    if char_index == -1 and line_index > 1:
+                        index = str(line_index - 1)+".end"
+                        outputpanel.delete(index)
+                    syntax_highlight(display_support.combobox,outputpanel)
+                    i+=3
+                elif command == "replace":
+                    start = input_text[i + 1]
+                    end = input_text[i + 2]
+                    char = input_text[i + 3]
 
-            index = input_text[1]
-            if command == "backspace":
-                index_ar = index.split(".")
-                line_index = int(index_ar[0])
-                char_index = int(index_ar[1]) - 1
-                index_ar[1] = str(char_index)
-                index = ".".join(index_ar)
-                if char_index >= 0:
-                    outputpanel.delete(index)
-                # backspace reached the beginning of the line, move the line up
-                if char_index == -1 and line_index > 1:
-                    index = str(line_index - 1)+".end"
-                    outputpanel.delete(index)
-                syntax_highlight(display_support.combobox,outputpanel)
-
-            elif command == "replace":
-                start = input_text[1]
-                end = input_text[2]
-                char = input_text[3]
-
-                try:
-                    text = escaped_chars[char]
-                except KeyError:
-                    text = chr(int(char))
-
-                outputpanel.delete(start, end)
-                outputpanel.insert(start, str(text))
-                syntax_highlight(display_support.combobox,outputpanel)
-
-            elif command == "replaceall":
-                outputpanel.delete(1.0, END)
-                data = codeshare.recv(1024).decode()
-                while True:
-                    if data.endswith("___EOF___"):
-                        outputpanel.insert(END, data[:-9])
-                        break
-                    outputpanel.insert(END, data)
-                    data = codeshare.recv(1024).decode()
-                    print(data)
-                syntax_highlight(display_support.combobox,outputpanel)
-
-
-
-            elif command == "delete":
-                outputpanel.delete(index)
-                syntax_highlight(display_support.combobox,outputpanel)
-
-            else:
-                try:
-                    char = input_text[2]
                     try:
                         text = escaped_chars[char]
                     except KeyError:
-                        text = str(chr(int(char)))
+                        text = chr(int(char))
 
-                    if text==' ' or text =='\n' or text == '\r' or text =='\t' or text=='(' or text =='\'' or text =='"':
-                        syntax_highlight(display_support.combobox,outputpanel)
-                    outputpanel.insert(index, text)
+                    outputpanel.delete(start, end)
+                    outputpanel.insert(start, str(text))
+                    syntax_highlight(display_support.combobox,outputpanel)
+                    i+=4
+                elif command == "replaceall":
+                    outputpanel.delete(1.0, END)
+                    data = codeshare.recv(1024).decode()
+                    while True:
+                        if data.endswith("___EOF___"):
+                            outputpanel.insert(END, data[:-9])
+                            break
+                        outputpanel.insert(END, data)
+                        data = codeshare.recv(1024).decode()
+                        print(data)
+                    syntax_highlight(display_support.combobox,outputpanel)
+                    i +=2
+                elif command == "paste":
+                    pos = input_text[i+1]
+                    data = codeshare.recv(1024).decode()
+                    while True:
+                        if data.endswith("___EOF___"):
+                            outputpanel.insert(pos, data[:-9])
+                            break
+                        outputpanel.insert(pos, data)
+                        data = codeshare.recv(1024).decode()
+                        print(data)
+                    syntax_highlight(display_support.combobox,outputpanel)
+                    i +=2
 
-                except IndexError:
-                    print("not a character")
-            LineNum.redraw()
+                elif command == "delete":
+                    outputpanel.delete(index)
+                    syntax_highlight(display_support.combobox,outputpanel)
+                    print("sdvsdf" + input_text)
+                    i+=2
+                else:
+                    try:
+                        char = input_text[i + 2]
+                        i+=3
+
+                        try:
+                            text = escaped_chars[char]
+                        except KeyError:
+                            text = str(chr(int(char)))
+
+                        if text==' ' or text =='\n' or text == '\r' or text =='\t' or text=='(' or text =='\'' or text =='"':
+                            syntax_highlight(display_support.combobox,outputpanel)
+                        outputpanel.insert(index, text)
+                    except IndexError:
+                        i+=2
+                        print("not a character")
+                LineNum.redraw()
 
         except OSError:
             break
@@ -510,7 +526,12 @@ def handle_keyboard(event, LineNum, t):
     elif ctrl and char=="s":
         save_file(t.EditorTextbox, t.LanguageSelect.get())
         return "break"
-    elif ctrl and not (char=="o" or char=="s" or char=="Left" or char=="Right" or char=="l"):
+    elif ctrl and (char =="c"):
+        return
+    elif ctrl and not (char=="o" or char=="s" or char=="Left" or char=="Right" or char=="l" or char=="c"):
+        start = event.widget.index(SEL_FIRST)
+        end = event.widget.index(SEL_LAST)
+        print (start + " " + end)
         return "break"
     LineNum.redraw()
     start = None
@@ -535,9 +556,9 @@ def handle_keyboard(event, LineNum, t):
         pass
 
     if start and end:
-        to_send = "replace " + start + " " + end + " " + input_text
+        to_send = " replace " + start + " " + end + " " + input_text
     else:
-        to_send = event.keysym + " " + index + " " + input_text
+        to_send = " " + event.keysym + " " + index + " " + input_text
 
     broadcast_code(to_send)
     return
