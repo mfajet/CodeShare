@@ -24,6 +24,7 @@ In order to run the project, make sure to have the following installed
 * ghci (sudo apt-get install haskell-platform)
 The haskell platform is only necessary if you want to run haskell code.
 
+### Before starting the server, make sure to edit the example-config.py file with appropriate values and rename it to config.py
 
 
 The server can be started by doing the following:
